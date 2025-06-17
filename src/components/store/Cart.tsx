@@ -44,7 +44,7 @@ export const Cart: React.FC<CartProps> = ({
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [notes, setNotes] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const { user, forceSessionSync, isSessionSyncing } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   
   const {
@@ -71,24 +71,6 @@ export const Cart: React.FC<CartProps> = ({
     acc[vendorId].items.push(item);
     return acc;
   }, {} as Record<string, { vendor: string; items: CartItem[] }>);
-
-  const handleRetrySession = async () => {
-    console.log('[Cart] 🔄 Retrying session sync...');
-    try {
-      await forceSessionSync();
-      toast({
-        title: "Session Synced",
-        description: "Authentication session has been refreshed. You can now place your order.",
-      });
-    } catch (error) {
-      console.error('[Cart] ❌ Retry session failed:', error);
-      toast({
-        title: "Session Sync Failed",
-        description: "Please try logging out and logging back in.",
-        variant: "destructive"
-      });
-    }
-  };
 
   const handlePlaceOrder = async () => {
     console.log('[Cart] 🛒 Place order triggered');
@@ -261,16 +243,6 @@ export const Cart: React.FC<CartProps> = ({
                   <p className="font-semibold text-amber-800 dark:text-amber-200 mb-1">Authentication Required</p>
                   <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300">Please log in to place an order.</p>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleRetrySession}
-                  disabled={isSessionSyncing}
-                  className="border-amber-300 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900 text-xs sm:text-sm"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isSessionSyncing ? 'animate-spin' : ''}`} />
-                  {isSessionSyncing ? 'Syncing...' : 'Sync Session'}
-                </Button>
               </div>
             </CardContent>
           </Card>

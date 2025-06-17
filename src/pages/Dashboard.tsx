@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   User, ShoppingBag, Calendar, CreditCard, FileText, Store, MessageSquare, Users,
   TrendingUp, BookOpen, Target, Newspaper, MessageCircle, Bot, Briefcase, Shield,
-  Settings, LogOut, Bell, Clock, Zap, Menu, X, Package, Trophy, UserCog, IdCard, RotateCcw
+  Settings, LogOut, Bell, Clock, Zap, Menu, X, Package, Trophy, UserCog, IdCard, RotateCcw, Ban
 } from "lucide-react";
 import { SidebarNav } from "@/components/dashboard/SidebarNav";
 import { NewProfilePage } from "@/components/profile/NewProfilePage";
@@ -20,14 +20,17 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { LeaderboardPage } from "@/components/dashboard/LeaderboardPage";
 import { CampusStorePage } from "@/components/store/CampusStorePage";
+import { usePermission } from "@/hooks/usePermission";
 
 const Dashboard = () => {
   const [activeSection, setActiveSection] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { profile } = useUserProfile();
-  const { user, signOut, cleanupAndReload, forceSessionSync, supabaseSession } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile();
+  const { user, signOut, cleanupAndReload, supabaseSession, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { currentUserRank, currentUserData } = useLeaderboard();
+  
+  const { hasPermission, isLoading: permissionLoading } = usePermission('dashboard:view');
 
   const handleSignOut = async () => {
     try {
@@ -40,15 +43,6 @@ const Dashboard = () => {
 
   const handleProfileClick = () => {
     setActiveSection("profile");
-  };
-
-  const handleForceSessionSync = async () => {
-    try {
-      await forceSessionSync();
-      console.log('[Dashboard] Force session sync completed');
-    } catch (error) {
-      console.error('[Dashboard] Force session sync failed:', error);
-    }
   };
 
   const dashboardSections = [
@@ -78,12 +72,41 @@ const Dashboard = () => {
     { id: "vault", label: "Document Vault", icon: Shield },
   ];
 
-  if (!user) {
+  const isLoading = authLoading || profileLoading || permissionLoading;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-950 dark:to-blue-950">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    // This case should be handled by ProtectedRoute, but as a fallback.
+    return null;
+  }
+
+  if (!hasPermission) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center p-8">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 mb-4">
+            <Ban className="h-6 w-6 text-destructive" />
+          </div>
+          <h1 className="text-2xl font-bold text-destructive mb-2">Access Denied</h1>
+          <p className="text-muted-foreground mb-6">
+            You do not have the necessary permissions to view the dashboard.
+            <br />
+            Please contact an administrator if you believe this is an error.
+          </p>
+          <Button onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
         </div>
       </div>
     );
@@ -170,10 +193,6 @@ const Dashboard = () => {
                 <DropdownMenuItem onClick={handleProfileClick}>
                   <User className="mr-2 h-4 w-4" />
                   <span>My Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleForceSessionSync}>
-                  <Zap className="mr-2 h-4 w-4" />
-                  <span>Force Session Sync</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={cleanupAndReload}>
                   <RotateCcw className="mr-2 h-4 w-4" />

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -7,14 +6,14 @@ import { ArrowLeft } from "lucide-react";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, sendEmailVerification } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { getUserProfile } from "@/services/userService";
 import ThemeToggle from "@/components/ThemeToggle";
 import { cleanupAuthState } from "@/utils/authCleanup";
 import { useTheme } from 'next-themes';
-import { supabase } from "@/integrations/supabase/client";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 import LoginInfoPanel from "@/components/auth/LoginInfoPanel";
 import LoginForm from "@/components/auth/LoginForm";
+import { supabase } from "@/integrations/supabase/client";
+import { getUserProfile } from "@/services/userService";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -59,18 +58,9 @@ const Login = () => {
         setIsLoading(false);
         return;
       }
-
-      // Check if user profile exists in Supabase
-      const profile = await getUserProfile(userCredential.user.uid);
       
-      if (!profile) {
-        toast.error("User profile not found. Please contact support.");
-        await auth.signOut();
-        setIsLoading(false);
-        return;
-      }
-      
-      toast.success("Welcome back to CampusConnect!");
+      // The dashboard will handle prompting for profile creation if needed.
+      toast.success("Login successful!");
       navigate("/dashboard");
       
     } catch (error: any) {
@@ -118,17 +108,9 @@ const Login = () => {
       cleanupAuthState();
       
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      await signInWithPopup(auth, provider);
       
-      // Check if user profile exists, if not redirect to complete registration
-      const profile = await getUserProfile(result.user.uid);
-      
-      if (!profile) {
-        toast.info("Please complete your registration with your academic details.");
-        navigate("/register");
-        return;
-      }
-      
+      // The dashboard will handle prompting for profile creation if needed.
       toast.success("Google sign-in successful!");
       navigate("/dashboard");
     } catch (error: any) {

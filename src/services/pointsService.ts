@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface PointsTransaction {
@@ -66,7 +65,7 @@ export const getPointsHistory = async (userId: string): Promise<PointsTransactio
         .from('engagement')
         .select('activity_points, created_at')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (engagementData && engagementData.activity_points > 0) {
         // Return a synthetic transaction to show the current points
@@ -115,7 +114,7 @@ export const getCurrentPoints = async (firebaseUid: string): Promise<number> => 
       .from('engagement')
       .select('activity_points')
       .eq('user_id', userData.id)
-      .single();
+      .maybeSingle();
 
     console.log('Engagement data:', engagementData);
     
