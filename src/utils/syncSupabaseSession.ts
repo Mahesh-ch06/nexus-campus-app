@@ -14,7 +14,7 @@ export const syncSupabaseSession = async (firebaseIdToken: string) => {
         "Accept": "application/json",
         "Authorization": `Bearer ${firebaseIdToken}`
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ firebaseIdToken }),
     });
 
     console.log('[SyncSupabaseSession] 📡 Response status:', res.status);
@@ -46,7 +46,7 @@ export const syncSupabaseSession = async (firebaseIdToken: string) => {
 
     return responseData.session;
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('[SyncSupabaseSession] ❌ Network or parsing error:', {
       name: error?.name,
       message: error?.message,
