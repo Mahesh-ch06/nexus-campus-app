@@ -50,7 +50,6 @@ export interface UserProfile {
   department: string;
   academic_year: string;
   phone_number: string;
-  role: string;
   email_verified: boolean;
   created_at: string;
   updated_at: string;
@@ -205,14 +204,12 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
         department,
         academic_year,
         phone_number,
-        role,
         email_verified,
         created_at,
         updated_at,
         profile_picture_url,
         is_active
       `)
-      .eq('role', 'student')
       .order('full_name', { ascending: true });
 
     if (error) {
