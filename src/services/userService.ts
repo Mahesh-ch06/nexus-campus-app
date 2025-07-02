@@ -146,8 +146,9 @@ export const createUserProfile = async (
 
     console.log("User profile created successfully:", data);
 
-    // After creating the user profile, the database trigger will create related data.
-    // We can now fetch the complete profile.
+    // The database trigger automatically creates related data (academic_info, engagement, preferences)
+    // Wait a moment for the trigger to complete, then fetch the complete profile
+    await new Promise(resolve => setTimeout(resolve, 100));
     const completeProfile = await getUserProfile(supabaseUser.id);
     
     return completeProfile;
