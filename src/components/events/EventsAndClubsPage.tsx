@@ -107,7 +107,7 @@ export const EventsAndClubsPage = () => {
       console.log("Attempting to join club with:", {
         clubId: selectedClub.id,
         userId: profile.id,
-        firebaseUid: user.uid,
+        firebaseUid: user.id,
         profileData: profile
       });
 
@@ -216,7 +216,7 @@ export const EventsAndClubsPage = () => {
 
   // Add debugging info to help identify the issue
   console.log("EventsAndClubsPage debug info:", {
-    user: user?.uid,
+    user: user?.id,
     profile: profile?.id,
     profileData: profile
   });

@@ -26,12 +26,10 @@ const ProtectedRoute = ({ children, requireEmailVerified = true }: ProtectedRout
     }
 
     // If user exists and needs verification, reload to get latest status
-    if (user && requireEmailVerified && !user.emailVerified) {
+    if (user && requireEmailVerified && user.email_confirmed_at === null) {
       hasChecked.current = true;
-      user.reload().finally(() => {
-        // onAuthStateChanged will update the user, and we stop our loader
-        setIsVerifying(false);
-      });
+      // Email not verified - just continue with loader off
+      setIsVerifying(false);
     } else {
       // No verification needed, or no user.
       hasChecked.current = true;
@@ -53,7 +51,7 @@ const ProtectedRoute = ({ children, requireEmailVerified = true }: ProtectedRout
     return <Navigate to="/login" replace />;
   }
 
-  if (requireEmailVerified && !user.emailVerified) {
+  if (requireEmailVerified && user.email_confirmed_at === null) {
     toast.error("Please verify your email to access this page.");
     return <Navigate to="/login" replace />;
   }

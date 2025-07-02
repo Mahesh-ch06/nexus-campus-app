@@ -25,7 +25,7 @@ const Dashboard = () => {
   const [activeSection, setActiveSection] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { profile } = useUserProfile();
-  const { user, signOut, cleanupAndReload, supabaseSession } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { currentUserRank, currentUserData } = useLeaderboard();
 
@@ -138,7 +138,7 @@ const Dashboard = () => {
                   <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                     <AvatarImage src={profile?.profile_picture_url || undefined} />
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
-                      {profile?.full_name?.split(' ').map(n => n[0]).join('') || user.displayName?.charAt(0) || user.email?.charAt(0).toUpperCase()}
+                      {profile?.full_name?.split(' ').map(n => n[0]).join('') || user.email?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -147,13 +147,13 @@ const Dashboard = () => {
                 <div className="flex items-center justify-start gap-2 p-2">
                   <div className="flex flex-col space-y-1 leading-none">
                     <p className="font-medium text-sm">
-                      {profile?.full_name || user.displayName || user.email?.split('@')[0]}
+                      {profile?.full_name || user.email?.split('@')[0]}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {profile?.hall_ticket || 'CS21B0001'}
                     </p>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Session: {supabaseSession ? '✓ Active' : '✗ Missing'}
+                      Session: Active
                     </div>
                   </div>
                 </div>
@@ -161,10 +161,6 @@ const Dashboard = () => {
                 <DropdownMenuItem onClick={handleProfileClick}>
                   <User className="mr-2 h-4 w-4" />
                   <span>My Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={cleanupAndReload}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  <span>Fix Auth Issues</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
@@ -176,7 +172,7 @@ const Dashboard = () => {
             
             <div className="hidden sm:block text-right">
               <p className="text-sm font-medium truncate max-w-32 lg:max-w-none">
-                {profile?.full_name || user.displayName || user.email?.split('@')[0]}
+                {profile?.full_name || user.email?.split('@')[0]}
               </p>
               <p className="text-xs text-muted-foreground">{profile?.hall_ticket || 'CS21B0001'}</p>
             </div>
@@ -261,7 +257,7 @@ const Dashboard = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                   <div>
                     <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2">
-                      👋 Welcome back, {profile?.full_name?.split(' ')[0] || user.displayName?.split(' ')[0] || 'Student'}!
+                      👋 Welcome back, {profile?.full_name?.split(' ')[0] || 'Student'}!
                     </h2>
                     <p className="text-white/80 text-sm sm:text-base lg:text-lg">Ready to make your campus life easier?</p>
                   </div>

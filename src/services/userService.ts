@@ -197,7 +197,7 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
       .from("users")
       .select(`
         id,
-        firebase_uid,
+        supabase_uid,
         full_name,
         hall_ticket,
         email,
@@ -218,11 +218,11 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
     }
     
     return (data || []).map(user => ({
-        ...user,
-        academic_info: null,
-        engagement: null,
-        documents: [],
-        preferences: null,
+      ...user,
+      academic_info: null,
+      engagement: null,  
+      documents: [],
+      preferences: null
     })) as UserProfile[];
 
   } catch (error) {

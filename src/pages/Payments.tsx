@@ -61,7 +61,7 @@ export default function Payments() {
       const { data: userData } = await supabase
         .from('users')
         .select('id')
-        .eq('firebase_uid', user.uid)
+        .eq('supabase_uid', user.id)
         .single();
 
       if (!userData) {

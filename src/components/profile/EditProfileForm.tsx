@@ -49,7 +49,7 @@ export const EditProfileForm = ({ profile, onSuccess, setOpen }: EditProfileForm
     const toastId = toast.loading("Updating profile...");
 
     try {
-      const updatedProfile = await updateUserProfile(user.uid, {
+      const updatedProfile = await updateUserProfile(user.id, {
         full_name: data.full_name,
         phone_number: data.phone_number,
       });

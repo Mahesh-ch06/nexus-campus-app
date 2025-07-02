@@ -83,7 +83,7 @@ export const Cart: React.FC<CartProps> = ({
 
     console.log('[Cart] 📊 Auth state check:', {
       hasUser: !!user,
-      firebaseUID: user?.uid,
+      firebaseUID: user?.id,
       timestamp: new Date().toISOString()
     });
 
@@ -105,7 +105,7 @@ export const Cart: React.FC<CartProps> = ({
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id')
-        .eq('firebase_uid', user.uid)
+        .eq('supabase_uid', user.id)
         .single();
 
       if (userError || !userData) {
