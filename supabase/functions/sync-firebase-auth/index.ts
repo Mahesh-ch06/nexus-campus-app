@@ -49,6 +49,9 @@ serve(async (req) => {
     // Validate required fields
     if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
       console.error(`[sync-firebase-auth] Missing required Firebase service account secrets`);
+      console.error(`[sync-firebase-auth] project_id: ${serviceAccount.project_id ? 'present' : 'missing'}`);
+      console.error(`[sync-firebase-auth] private_key: ${serviceAccount.private_key ? 'present' : 'missing'}`);
+      console.error(`[sync-firebase-auth] client_email: ${serviceAccount.client_email ? 'present' : 'missing'}`);
       return errorResponse("Firebase service account configuration incomplete", 500);
     }
 

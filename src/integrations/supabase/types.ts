@@ -1240,7 +1240,7 @@ export type Database = {
         Returns: boolean
       }
       check_hall_ticket_exists: {
-        Args: { p_hall_ticket: string }
+        Args: Record<PropertyKey, never> | { p_hall_ticket: string }
         Returns: boolean
       }
       get_current_user_id: {
