@@ -68,11 +68,19 @@ serve(async (req) => {
     const auth = getAuth();
     let decoded;
     try {
+      console.log(`[sync-firebase-auth] Attempting to verify token for project: ${serviceAccount.project_id}`);
+      console.log(`[sync-firebase-auth] Token starts with: ${firebaseIdToken.substring(0, 20)}...`);
       decoded = await auth.verifyIdToken(firebaseIdToken, true);
       console.log(`[sync-firebase-auth] Token verified for user: ${decoded.uid}`);
     } catch (e) {
       console.error(`[sync-firebase-auth] Token verification failed:`, e);
-      return errorResponse("Invalid Firebase ID token", 401, { firebaseError: e.message });
+      console.error(`[sync-firebase-auth] Error details:`, {
+        name: e.name,
+        message: e.message,
+        code: e.code,
+        stack: e.stack
+      });
+      return errorResponse("Invalid Firebase ID token", 401, { firebaseError: e.message, errorCode: e.code });
     }
 
     // Generate a Supabase session (using service key)
