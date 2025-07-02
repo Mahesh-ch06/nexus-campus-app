@@ -1147,13 +1147,13 @@ export type Database = {
           department: string
           email: string
           email_verified: boolean | null
-          firebase_uid: string
           full_name: string
           hall_ticket: string
           id: string
           is_active: boolean | null
           phone_number: string
           profile_picture_url: string | null
+          supabase_uid: string
           updated_at: string | null
         }
         Insert: {
@@ -1162,13 +1162,13 @@ export type Database = {
           department: string
           email: string
           email_verified?: boolean | null
-          firebase_uid: string
           full_name: string
           hall_ticket: string
           id?: string
           is_active?: boolean | null
           phone_number: string
           profile_picture_url?: string | null
+          supabase_uid: string
           updated_at?: string | null
         }
         Update: {
@@ -1177,13 +1177,13 @@ export type Database = {
           department?: string
           email?: string
           email_verified?: boolean | null
-          firebase_uid?: string
           full_name?: string
           hall_ticket?: string
           id?: string
           is_active?: boolean | null
           phone_number?: string
           profile_picture_url?: string | null
+          supabase_uid?: string
           updated_at?: string | null
         }
         Relationships: []

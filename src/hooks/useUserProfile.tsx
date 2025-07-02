@@ -19,9 +19,9 @@ export const useUserProfile = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log("Fetching profile for user:", user.uid);
+      console.log("Fetching profile for user:", user.id);
       
-      const userProfile = await getUserProfile(user.uid);
+      const userProfile = await getUserProfile(user.id);
       setProfile(userProfile);
     } catch (err) {
       console.error("Failed to fetch profile:", err);

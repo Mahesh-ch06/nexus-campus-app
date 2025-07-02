@@ -91,19 +91,19 @@ export const getPointsHistory = async (userId: string): Promise<PointsTransactio
   }
 };
 
-export const getCurrentPoints = async (firebaseUid: string): Promise<number> => {
+export const getCurrentPoints = async (supabaseUid: string): Promise<number> => {
   try {
-    console.log('Fetching current points for firebaseUid:', firebaseUid);
+    console.log('Fetching current points for supabaseUid:', supabaseUid);
     
     // First get the user's internal ID
     const { data: userData } = await supabase
       .from('users')
       .select('id')
-      .eq('firebase_uid', firebaseUid)
+      .eq('supabase_uid', supabaseUid)
       .single();
 
     if (!userData) {
-      console.log('No user found for firebaseUid:', firebaseUid);
+      console.log('No user found for supabaseUid:', supabaseUid);
       return 0;
     }
 
@@ -224,7 +224,7 @@ export const redeemVoucher = async (
     // Get user details
     const { data: userData } = await supabase
       .from('users')
-      .select('id, firebase_uid')
+      .select('id, supabase_uid')
       .eq('id', userId)
       .single();
 
@@ -233,7 +233,7 @@ export const redeemVoucher = async (
     }
 
     // Check if user has enough points
-    const currentPoints = await getCurrentPoints(userData.firebase_uid);
+    const currentPoints = await getCurrentPoints(userData.supabase_uid);
     if (currentPoints < voucher.points_required) {
       return { success: false, error: 'Insufficient points' };
     }

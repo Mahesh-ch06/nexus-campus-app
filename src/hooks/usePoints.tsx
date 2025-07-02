@@ -28,14 +28,14 @@ export const usePoints = () => {
       setError(null);
 
       // Get current points
-      const points = await getCurrentPoints(user.uid);
+      const points = await getCurrentPoints(user.id);
       setCurrentPoints(points);
 
       // Get user's internal ID for history
       const { data: userData } = await supabase
         .from('users')
         .select('id')
-        .eq('firebase_uid', user.uid)
+        .eq('supabase_uid', user.id)
         .single();
 
       if (userData) {
