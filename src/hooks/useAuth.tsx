@@ -1,25 +1,23 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { User, onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { cleanupAuthState } from "@/utils/authCleanup";
+import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { Session } from "@supabase/supabase-js";
-import { syncSupabaseSession } from "@/utils/syncSupabaseSession";
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   loading: boolean;
-  supabaseSession: Session | null;
+  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
-  cleanupAndReload: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  session: null,
   loading: true,
-  supabaseSession: null,
+  signUp: async () => ({ error: null }),
+  signIn: async () => ({ error: null }),
   signOut: async () => {},
-  cleanupAndReload: () => {},
 });
 
 export const useAuth = () => {
@@ -36,112 +34,106 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
-  const [supabaseSession, setSupabaseSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const cleanupAndReload = () => {
-    console.log('[Auth] Manual cleanup and reload triggered');
-    cleanupAuthState();
-    setTimeout(() => {
-      window.location.href = '/login';
-    }, 500);
-  };
-
   useEffect(() => {
-    console.log('[Auth] 🚀 Initializing AuthProvider...');
-    setLoading(true);
-
-    // Firebase is the source of truth for auth state.
-    const unsubscribeFirebase = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log(`[Auth] 🔥 Firebase auth state changed. User: ${firebaseUser?.uid}`);
-      setUser(firebaseUser);
-
-      if (firebaseUser) {
-        console.log('[Auth] 🔄 Syncing Firebase session to Supabase via Edge Function...');
-        try {
-          const token = await firebaseUser.getIdToken();
-          const newSupabaseSession = await syncSupabaseSession(token);
-
-          if (newSupabaseSession && newSupabaseSession.access_token && newSupabaseSession.refresh_token) {
-            const { error } = await supabase.auth.setSession({
-              access_token: newSupabaseSession.access_token,
-              refresh_token: newSupabaseSession.refresh_token,
-            });
-
-            if (error) {
-              console.error('[Auth] ❌ Error setting Supabase session from synced data:', error);
-              setSupabaseSession(null);
-            } else {
-              // After setting session, we can get it to update our state.
-              const { data: { session } } = await supabase.auth.getSession();
-              setSupabaseSession(session);
-              console.log('[Auth] ✅ Supabase session synced via Edge Function.');
-            }
-          } else {
-            console.error('[Auth] ❌ Sync function did not return a valid session.');
-            setSupabaseSession(null);
-          }
-        } catch (error) {
-          console.error('[Auth] ❌ Error syncing with Supabase Edge Function:', error);
-          await supabase.auth.signOut();
-          setSupabaseSession(null);
-        }
-      } else {
-        console.log('[Auth] 🚫 No Firebase user. Signing out of Supabase.');
-        await supabase.auth.signOut();
-        setSupabaseSession(null);
-      }
+    console.log('[Auth] 🚀 Initializing Supabase AuthProvider...');
+    
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[Auth] Initial session:', session?.user?.email || 'No session');
+      setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
     });
-    
-    // Also listen to Supabase auth changes, e.g. for token refresh.
+
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log(`[Auth] Supabase auth state changed: ${event}`);
-      if (session !== supabaseSession) {
-        setSupabaseSession(session);
-      }
+      console.log(`[Auth] Auth state changed: ${event}`, session?.user?.email || 'No user');
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
 
     return () => {
-      console.log('[Auth] 🧹 Cleaning up auth listeners');
-      unsubscribeFirebase();
+      console.log('[Auth] 🧹 Cleaning up auth listener');
       subscription.unsubscribe();
     };
   }, []);
 
-  const signOut = async () => {
+  const signUp = async (email: string, password: string) => {
     try {
-      console.log('[Auth] 🚪 Starting sign out process...');
+      console.log('[Auth] 📝 Signing up user:', email);
       
-      const removedCount = cleanupAuthState();
-      console.log('[Auth] 🧹 Cleaned up auth state, removed', removedCount, 'keys');
-      
-      await firebaseSignOut(auth);
-      console.log('[Auth] ✅ Firebase sign out complete');
-      // onAuthStateChanged will handle Supabase signout and clearing state.
-      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+
+      if (error) {
+        console.error('[Auth] ❌ Sign up error:', error);
+        return { error };
+      }
+
+      console.log('[Auth] ✅ Sign up successful:', data.user?.email);
+      return { error: null };
     } catch (error) {
-      console.error('[Auth] ❌ Error during sign out:', error);
+      console.error('[Auth] ❌ Sign up exception:', error);
+      return { error };
     }
   };
 
-  useEffect(() => {
-    console.log('[Auth] 📊 Current auth state updated:', {
-      hasUser: !!user,
-      userEmail: user?.email,
-      hasSupabaseSession: !!supabaseSession,
-      hasAccessToken: !!supabaseSession?.access_token,
-      loading,
-      timestamp: new Date().toISOString()
-    });
-  }, [user, supabaseSession, loading]);
+  const signIn = async (email: string, password: string) => {
+    try {
+      console.log('[Auth] 🔑 Signing in user:', email);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('[Auth] ❌ Sign in error:', error);
+        return { error };
+      }
+
+      console.log('[Auth] ✅ Sign in successful:', data.user?.email);
+      return { error: null };
+    } catch (error) {
+      console.error('[Auth] ❌ Sign in exception:', error);
+      return { error };
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      console.log('[Auth] 🚪 Signing out...');
+      
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('[Auth] ❌ Sign out error:', error);
+        throw error;
+      }
+      
+      console.log('[Auth] ✅ Sign out successful');
+    } catch (error) {
+      console.error('[Auth] ❌ Sign out exception:', error);
+      throw error;
+    }
+  };
 
   const value = {
     user,
+    session,
     loading,
-    supabaseSession,
+    signUp,
+    signIn,
     signOut,
-    cleanupAndReload,
   };
 
   return (

@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "firebase/auth";
+import { User } from "@supabase/supabase-js";
 
 export interface AcademicInfo {
   id: string;
@@ -43,7 +43,7 @@ export interface Preferences {
 
 export interface UserProfile {
   id: string;
-  firebase_uid: string;
+  supabase_uid: string;
   full_name: string;
   hall_ticket: string;
   email: string;
@@ -99,7 +99,7 @@ export const checkEmailExists = async (email: string): Promise<boolean> => {
 };
 
 export const createUserProfile = async (
-  firebaseUser: User,
+  supabaseUser: User,
   additionalData: {
     fullName: string;
     hallTicket: string;
@@ -109,19 +109,19 @@ export const createUserProfile = async (
   }
 ): Promise<UserProfile | null> => {
   try {
-    console.log("Creating user profile for Firebase UID:", firebaseUser.uid);
-    console.log("Firebase user email:", firebaseUser.email);
+    console.log("Creating user profile for Supabase UID:", supabaseUser.id);
+    console.log("Supabase user email:", supabaseUser.email);
     console.log("Additional data:", additionalData);
 
     const insertData = {
-      firebase_uid: firebaseUser.uid,
+      supabase_uid: supabaseUser.id,
       full_name: additionalData.fullName,
       hall_ticket: additionalData.hallTicket,
-      email: firebaseUser.email!,
+      email: supabaseUser.email!,
       department: additionalData.department,
       academic_year: additionalData.academicYear,
       phone_number: additionalData.phoneNumber,
-      email_verified: firebaseUser.emailVerified,
+      email_verified: supabaseUser.email_confirmed_at !== null,
     };
 
     console.log("Inserting data:", insertData);
@@ -148,7 +148,7 @@ export const createUserProfile = async (
 
     // After creating the user profile, the database trigger will create related data.
     // We can now fetch the complete profile.
-    const completeProfile = await getUserProfile(firebaseUser.uid);
+    const completeProfile = await getUserProfile(supabaseUser.id);
     
     return completeProfile;
   } catch (error) {
@@ -157,9 +157,9 @@ export const createUserProfile = async (
   }
 };
 
-export const getUserProfile = async (firebaseUid: string): Promise<UserProfile | null> => {
+export const getUserProfile = async (supabaseUid: string): Promise<UserProfile | null> => {
   try {
-    console.log("Fetching user profile for UID:", firebaseUid);
+    console.log("Fetching user profile for UID:", supabaseUid);
     
     const { data, error } = await supabase
       .from("users")
@@ -170,7 +170,7 @@ export const getUserProfile = async (firebaseUid: string): Promise<UserProfile |
         documents(*),
         preferences(*)
       `)
-      .eq("firebase_uid", firebaseUid)
+      .eq("supabase_uid", supabaseUid)
       .maybeSingle();
 
     if (error) {
@@ -179,7 +179,7 @@ export const getUserProfile = async (firebaseUid: string): Promise<UserProfile |
     }
 
     if (!data) {
-      console.log("No user profile found for UID:", firebaseUid);
+      console.log("No user profile found for UID:", supabaseUid);
       return null;
     }
 
@@ -232,7 +232,7 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
 };
 
 export const updateUserProfile = async (
-  firebaseUid: string,
+  supabaseUid: string,
   updates: {
     full_name?: string;
     phone_number?: string;
@@ -242,7 +242,7 @@ export const updateUserProfile = async (
     const { error } = await supabase
       .from("users")
       .update(updates)
-      .eq("firebase_uid", firebaseUid);
+      .eq("supabase_uid", supabaseUid);
 
     if (error) {
       console.error("Error updating user profile:", error);
@@ -250,7 +250,7 @@ export const updateUserProfile = async (
     }
 
     // After successful update, fetch the full profile to get all relations
-    return await getUserProfile(firebaseUid);
+    return await getUserProfile(supabaseUid);
   } catch (error) {
     console.error("Error updating user profile:", error);
     return null;
