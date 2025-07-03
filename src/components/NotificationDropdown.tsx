@@ -21,6 +21,10 @@ interface NotificationDropdownProps {
   userId: string;
 }
 
+interface UserData {
+  id: string;
+}
+
 const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -43,12 +47,12 @@ const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => 
       setIsLoading(true);
       console.log('Fetching notifications for Firebase UID:', userId, 'club:', clubId);
       
-      // Get the current user's internal ID from the users table
+      // Get the current user's internal ID from the users table with explicit typing
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id')
         .eq('firebase_uid', userId)
-        .single();
+        .single() as { data: UserData | null; error: any };
 
       if (userError) {
         console.error('Error fetching user data:', userError);
@@ -69,7 +73,7 @@ const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => 
 
       console.log('Found internal user ID:', userData.id);
 
-      // Create the base query for notifications
+      // Create the base query for notifications with explicit typing
       let query = supabase
         .from('notifications')
         .select('*')
@@ -83,7 +87,7 @@ const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => 
         console.log('Filtering notifications for club:', clubId);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query as { data: Notification[] | null; error: any };
       
       if (error) {
         console.error('Error fetching notifications:', error);
