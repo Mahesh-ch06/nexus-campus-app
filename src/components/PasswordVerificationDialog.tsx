@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Lock, AlertCircle, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PasswordVerificationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onVerify: (password: string) => boolean;
+  onVerify: (token: string) => void;
   getPasswordFormat?: () => string;
   hasProfile?: boolean;
 }
@@ -26,31 +28,64 @@ export const PasswordVerificationDialog: React.FC<PasswordVerificationDialogProp
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to verify your password.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
-    const isCorrect = onVerify(password);
-    
-    if (isCorrect) {
-      toast({
-        title: "Verification Successful",
-        description: "You can now place orders without verification.",
+    try {
+      const { data, error } = await supabase.functions.invoke('user-verification', {
+        body: { 
+          password,
+          userId: user.id 
+        }
       });
-      setPassword('');
-      onClose();
-    } else {
-      setError('Incorrect password. Please check the format below.');
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.success) {
+        // Store verification token securely
+        sessionStorage.setItem('user_verification_token', data.verificationToken);
+        toast({
+          title: "Verification Successful",
+          description: "You can now place orders without verification.",
+        });
+        onVerify(data.verificationToken);
+        setPassword('');
+        onClose();
+      } else {
+        setError(data?.error || 'Incorrect password. Please try again.');
+        toast({
+          title: "Incorrect Password",
+          description: "Please enter the correct password using the format shown below.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      setError('Verification failed. Please try again.');
       toast({
-        title: "Incorrect Password",
-        description: "Please enter the correct password using the format shown below.",
+        title: "Verification Failed",
+        description: "Please try again or contact support if the issue persists.",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const passwordFormat = getPasswordFormat ? getPasswordFormat() : '@{yourname}{last4digits}';
@@ -81,6 +116,7 @@ export const PasswordVerificationDialog: React.FC<PasswordVerificationDialogProp
                 setError('');
               }}
               className={error ? 'border-red-500 focus:border-red-500' : ''}
+              disabled={isLoading}
               required
             />
             {error && (

@@ -6,27 +6,48 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from '@/components/ui/sonner';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PasswordPromptProps {
     onSuccess: () => void;
 }
 
-const CORRECT_PASSWORD = '@CC-Pointsforfree';
-
 export const PasswordPrompt = ({ onSuccess }: PasswordPromptProps) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (password === CORRECT_PASSWORD) {
-            toast.success('Access Granted!');
-            onSuccess();
-        } else {
-            setError('Incorrect password. Please try again.');
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const { data, error } = await supabase.functions.invoke('staff-auth', {
+                body: { password }
+            });
+
+            if (error) {
+                throw error;
+            }
+
+            if (data?.success) {
+                // Store session token securely
+                sessionStorage.setItem('staff_session', data.sessionToken);
+                toast.success('Access Granted!');
+                onSuccess();
+            } else {
+                setError(data?.error || 'Authentication failed');
+                toast.error('Access Denied');
+            }
+        } catch (error) {
+            console.error('Staff authentication error:', error);
+            setError('Authentication failed. Please try again.');
             toast.error('Access Denied');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -57,6 +78,7 @@ export const PasswordPrompt = ({ onSuccess }: PasswordPromptProps) => {
                             }}
                             placeholder="Enter password"
                             className={error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                            disabled={isLoading}
                         />
                          <Button
                             type="button"
@@ -64,6 +86,7 @@ export const PasswordPrompt = ({ onSuccess }: PasswordPromptProps) => {
                             size="icon"
                             className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
                             onClick={() => setShowPassword(!showPassword)}
+                            disabled={isLoading}
                         >
                             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </Button>
@@ -71,8 +94,8 @@ export const PasswordPrompt = ({ onSuccess }: PasswordPromptProps) => {
                     {error && <p className="text-destructive text-sm">{error}</p>}
                 </CardContent>
                 <CardFooter>
-                    <Button type="submit" className="w-full">
-                        Enter
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading ? "Verifying..." : "Enter"}
                     </Button>
                 </CardFooter>
             </form>

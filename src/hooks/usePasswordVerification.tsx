@@ -1,8 +1,8 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useUserProfile } from './useUserProfile';
 
-const VERIFICATION_KEY = 'campusconnect_verified';
+const VERIFICATION_KEY = 'user_verification_token';
 
 export const usePasswordVerification = () => {
   const [isVerified, setIsVerified] = useState(false);
@@ -10,9 +10,9 @@ export const usePasswordVerification = () => {
   const { profile } = useUserProfile();
 
   useEffect(() => {
-    // Check if user is already verified
-    const verified = localStorage.getItem(VERIFICATION_KEY) === 'true';
-    setIsVerified(verified);
+    // Check if user has a valid verification token
+    const token = sessionStorage.getItem(VERIFICATION_KEY);
+    setIsVerified(!!token);
   }, []);
 
   const generateExpectedPassword = (): string | null => {
@@ -29,25 +29,14 @@ export const usePasswordVerification = () => {
     return `@${firstName}${last4Digits}`;
   };
 
-  const verifyPassword = (password: string): boolean => {
-    const expectedPassword = generateExpectedPassword();
-    
-    if (!expectedPassword) {
-      console.error('Could not generate expected password - profile data missing');
-      return false;
-    }
-
-    console.log('Expected password:', expectedPassword);
-    console.log('Entered password:', password);
-
-    if (password === expectedPassword) {
+  const verifyPassword = useCallback((token: string): boolean => {
+    if (token) {
       setIsVerified(true);
-      localStorage.setItem(VERIFICATION_KEY, 'true');
       setShowPasswordDialog(false);
       return true;
     }
     return false;
-  };
+  }, []);
 
   const requestVerification = () => {
     setShowPasswordDialog(true);
@@ -55,7 +44,7 @@ export const usePasswordVerification = () => {
 
   const clearVerification = () => {
     setIsVerified(false);
-    localStorage.removeItem(VERIFICATION_KEY);
+    sessionStorage.removeItem(VERIFICATION_KEY);
   };
 
   const getPasswordFormat = (): string => {
