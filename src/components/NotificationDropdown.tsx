@@ -43,15 +43,17 @@ const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => 
       setIsLoading(true);
       console.log('Fetching notifications for Firebase UID:', userId, 'club:', clubId);
       
-      // Get the current user's internal ID - simplified approach
-      const { data: userData, error: userError } = await supabase
+      // Get the current user's internal ID - use explicit typing
+      const userQuery = supabase
         .from('users')
         .select('id')
         .eq('firebase_uid', userId)
         .maybeSingle();
 
-      if (userError) {
-        console.error('Error fetching user data:', userError);
+      const userResult = await userQuery;
+
+      if (userResult.error) {
+        console.error('Error fetching user data:', userResult.error);
         toast({
           title: "Error",
           description: "Failed to fetch user data for notifications.",
@@ -61,33 +63,32 @@ const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => 
         return;
       }
 
-      if (!userData?.id) {
+      if (!userResult.data?.id) {
         console.error('No user found with firebase_uid:', userId);
         setIsLoading(false);
         return;
       }
 
-      console.log('Found internal user ID:', userData.id);
+      console.log('Found internal user ID:', userResult.data.id);
 
-      // Build the notification query with explicit destructuring
-      const queryBuilder = supabase
+      // Build notification query without complex chaining
+      let notificationQuery = supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', userData.id)
+        .eq('user_id', userResult.data.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
-      // Apply club filter if provided
-      const finalQuery = clubId ? queryBuilder.eq('club_id', clubId) : queryBuilder;
-      
+      // Apply club filter if provided - avoid reassigning the query
       if (clubId) {
         console.log('Filtering notifications for club:', clubId);
+        notificationQuery = notificationQuery.eq('club_id', clubId);
       }
 
-      const { data: notificationData, error: notificationError } = await finalQuery;
+      const notificationResult = await notificationQuery;
       
-      if (notificationError) {
-        console.error('Error fetching notifications:', notificationError);
+      if (notificationResult.error) {
+        console.error('Error fetching notifications:', notificationResult.error);
         toast({
           title: "Error",
           description: "Failed to load notifications.",
@@ -97,9 +98,9 @@ const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => 
         return;
       }
       
-      console.log('Fetched notifications:', notificationData);
+      console.log('Fetched notifications:', notificationResult.data);
       
-      const notifications = notificationData || [];
+      const notifications = notificationResult.data || [];
       setNotifications(notifications);
       setUnreadCount(notifications.filter(n => !n.read).length);
     } catch (error) {
