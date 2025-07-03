@@ -71,17 +71,21 @@ export const PartnerAuthProvider = ({ children }: PartnerAuthProviderProps) => {
 
   const fetchPartnerProfile = async (userId: string) => {
     try {
+      // Use consistent column name for authentication
       const { data: vendor, error } = await supabase
         .from('vendors')
         .select('*')
         .eq('firebase_uid', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching partner profile:", error);
         setPartner(null);
-      } else {
+      } else if (vendor) {
         setPartner(vendor as PartnerProfile);
+      } else {
+        console.log("No partner profile found for user:", userId);
+        setPartner(null);
       }
     } catch (error) {
       console.error("Error fetching partner profile:", error);

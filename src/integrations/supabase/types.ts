@@ -1003,6 +1003,50 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audit_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: unknown | null
+          resource_id: string | null
+          resource_type: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          resource_id?: string | null
+          resource_type: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          resource_id?: string | null
+          resource_type?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_wallets: {
         Row: {
           created_at: string
@@ -1227,6 +1271,30 @@ export type Database = {
           rejection_reason?: string | null
           status?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      verification_attempts: {
+        Row: {
+          attempt_time: string | null
+          id: string
+          ip_address: unknown | null
+          success: boolean | null
+          user_id: string
+        }
+        Insert: {
+          attempt_time?: string | null
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean | null
+          user_id: string
+        }
+        Update: {
+          attempt_time?: string | null
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean | null
+          user_id?: string
         }
         Relationships: []
       }

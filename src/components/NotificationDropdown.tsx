@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,17 +41,17 @@ const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => 
 
     try {
       setIsLoading(true);
-      console.log('Fetching notifications for Firebase UID:', userId, 'club:', clubId);
+      console.log('Fetching notifications for user UID:', userId, 'club:', clubId);
       
-      // First get the user ID with basic query to avoid type issues
-      const { data: userData, error: userError } = await supabase
+      // Get user's internal ID using consistent column name
+      const userQuery = await supabase
         .from('users')
         .select('id')
-        .eq('firebase_uid', userId)
-        .limit(1);
+        .eq('supabase_uid', userId)
+        .maybeSingle();
 
-      if (userError) {
-        console.error('Error fetching user data:', userError);
+      if (userQuery.error) {
+        console.error('Error fetching user data:', userQuery.error);
         toast({
           title: "Error",
           description: "Failed to fetch user data for notifications.",
@@ -60,31 +61,31 @@ const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => 
         return;
       }
 
-      if (!userData || userData.length === 0) {
-        console.error('No user found with firebase_uid:', userId);
+      if (!userQuery.data) {
+        console.error('No user found with supabase_uid:', userId);
         setIsLoading(false);
         return;
       }
 
-      const internalUserId = userData[0].id;
+      const internalUserId = userQuery.data.id;
       console.log('Found internal user ID:', internalUserId);
 
-      // Build the notification query with simple conditions
-      let query = supabase
+      // Build notification query
+      let notificationQuery = supabase
         .from('notifications')
         .select('*')
         .eq('user_id', internalUserId);
 
       if (clubId) {
-        query = query.eq('club_id', clubId);
+        notificationQuery = notificationQuery.eq('club_id', clubId);
       }
 
-      const { data: notificationData, error: notificationError } = await query
+      const notificationResult = await notificationQuery
         .order('created_at', { ascending: false })
         .limit(10);
       
-      if (notificationError) {
-        console.error('Error fetching notifications:', notificationError);
+      if (notificationResult.error) {
+        console.error('Error fetching notifications:', notificationResult.error);
         toast({
           title: "Error",
           description: "Failed to load notifications.",
@@ -94,9 +95,9 @@ const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => 
         return;
       }
       
-      console.log('Fetched notifications:', notificationData);
+      console.log('Fetched notifications:', notificationResult.data);
       
-      const notifications = notificationData || [];
+      const notifications = notificationResult.data || [];
       setNotifications(notifications);
       setUnreadCount(notifications.filter(n => !n.read).length);
     } catch (error) {
