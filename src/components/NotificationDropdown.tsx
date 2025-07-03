@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +19,6 @@ interface Notification {
 interface NotificationDropdownProps {
   clubId?: string;
   userId: string;
-}
-
-interface UserData {
-  id: string;
 }
 
 const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => {
@@ -46,15 +43,15 @@ const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => 
       setIsLoading(true);
       console.log('Fetching notifications for Firebase UID:', userId, 'club:', clubId);
       
-      // Get the current user's internal ID from the users table with explicit typing
-      const { data: userData, error: userError } = await supabase
+      // Get the current user's internal ID from the users table
+      const userQuery = await supabase
         .from('users')
         .select('id')
         .eq('firebase_uid', userId)
-        .single() as { data: UserData | null; error: any };
+        .single();
 
-      if (userError) {
-        console.error('Error fetching user data:', userError);
+      if (userQuery.error) {
+        console.error('Error fetching user data:', userQuery.error);
         toast({
           title: "Error",
           description: "Failed to fetch user data for notifications.",
@@ -64,29 +61,29 @@ const NotificationDropdown = ({ clubId, userId }: NotificationDropdownProps) => 
         return;
       }
 
-      if (!userData?.id) {
+      if (!userQuery.data?.id) {
         console.error('No user found with firebase_uid:', userId);
         setIsLoading(false);
         return;
       }
 
-      console.log('Found internal user ID:', userData.id);
+      console.log('Found internal user ID:', userQuery.data.id);
 
-      // Create the base query for notifications with explicit typing
-      let query = supabase
+      // Create the base query for notifications
+      let notificationQuery = supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', userData.id)
+        .eq('user_id', userQuery.data.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
       // If clubId is provided, filter by club
       if (clubId) {
-        query = query.eq('club_id', clubId);
+        notificationQuery = notificationQuery.eq('club_id', clubId);
         console.log('Filtering notifications for club:', clubId);
       }
 
-      const { data, error } = await query as { data: Notification[] | null; error: any };
+      const { data, error } = await notificationQuery;
       
       if (error) {
         console.error('Error fetching notifications:', error);
