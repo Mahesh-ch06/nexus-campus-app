@@ -1,177 +1,30 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
-
-export interface AcademicInfo {
-  id: string;
-  user_id: string;
-  current_semester: number | null;
-  cgpa: number | null;
-  subjects_enrolled: string[] | null;
-  mentor_name: string | null;
-  mentor_email: string | null;
-}
-
-export interface Engagement {
-    id: string;
-    user_id: string;
-    activity_points: number;
-    badges: any | null; // JSONB
-    last_login: string | null;
-    events_attended: string[] | null;
-    feedback_count: number;
-    created_at: string;
-    updated_at: string;
-}
-
-export interface UserDocument {
-    id: string;
-    user_id: string;
-    doc_type: string;
-    doc_url: string;
-    file_name: string;
-    verified_by_admin: boolean;
-}
-
-export interface Preferences {
-    id: string;
-    user_id: string;
-    language: string;
-    theme: 'Light' | 'Dark' | 'System';
-    notifications_enabled: boolean;
-    widgets_enabled: any | null; // JSONB
-}
 
 export interface UserProfile {
   id: string;
   supabase_uid: string;
   full_name: string;
-  hall_ticket: string;
   email: string;
+  phone_number: string;
   department: string;
   academic_year: string;
-  phone_number: string;
+  hall_ticket: string;
+  profile_picture_url?: string;
+  is_active: boolean;
   email_verified: boolean;
-  created_at: string;
-  updated_at: string;
-  profile_picture_url: string | null;
-  is_active: boolean | null;
-
-  academic_info: AcademicInfo | null;
-  engagement: Engagement | null;
-  documents: UserDocument[];
-  preferences: Preferences | null;
+  created_at?: string;
+  updated_at?: string;
 }
-
-export const checkHallTicketExists = async (hallTicket: string): Promise<boolean> => {
-  try {
-    console.log("Checking hall ticket via RPC:", hallTicket);
-    const { data, error } = await supabase.rpc('check_hall_ticket_exists', { p_hall_ticket: hallTicket });
-
-    if (error) {
-      console.error("Error checking hall ticket via RPC:", error);
-      // Default to false to allow registration attempt, the backend will have the final say.
-      return false;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error("Exception checking hall ticket:", error);
-    return false;
-  }
-};
-
-export const checkEmailExists = async (email: string): Promise<boolean> => {
-  try {
-    console.log("Checking email via RPC:", email);
-    const { data, error } = await supabase.rpc('check_email_exists', { p_email: email });
-
-    if (error) {
-      console.error("Error checking email via RPC:", error);
-      // Default to false to allow registration attempt, the backend will have the final say.
-      return false;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error("Exception checking email:", error);
-    return false;
-  }
-};
-
-export const createUserProfile = async (
-  supabaseUser: User,
-  additionalData: {
-    fullName: string;
-    hallTicket: string;
-    department: string;
-    academicYear: string;
-    phoneNumber: string;
-  }
-): Promise<UserProfile | null> => {
-  try {
-    console.log("Creating user profile for Supabase UID:", supabaseUser.id);
-    console.log("Supabase user email:", supabaseUser.email);
-    console.log("Additional data:", additionalData);
-
-    const insertData = {
-      supabase_uid: supabaseUser.id,
-      full_name: additionalData.fullName,
-      hall_ticket: additionalData.hallTicket,
-      email: supabaseUser.email!,
-      department: additionalData.department,
-      academic_year: additionalData.academicYear,
-      phone_number: additionalData.phoneNumber,
-      email_verified: supabaseUser.email_confirmed_at !== null,
-    };
-
-    console.log("Inserting data:", insertData);
-
-    // Insert the user profile using the permissive RLS policy
-    const { data, error } = await supabase
-      .from("users")
-      .insert(insertData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error creating user profile:", error);
-      console.error("Error details:", {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      });
-      return null;
-    }
-
-    console.log("User profile created successfully:", data);
-
-    // The database trigger automatically creates related data (academic_info, engagement, preferences)
-    // Wait a moment for the trigger to complete, then fetch the complete profile
-    await new Promise(resolve => setTimeout(resolve, 100));
-    const completeProfile = await getUserProfile(supabaseUser.id);
-    
-    return completeProfile;
-  } catch (error) {
-    console.error("Error creating user profile:", error);
-    return null;
-  }
-};
 
 export const getUserProfile = async (supabaseUid: string): Promise<UserProfile | null> => {
   try {
     console.log("Fetching user profile for UID:", supabaseUid);
     
     const { data, error } = await supabase
-      .from("users")
-      .select(`
-        *,
-        academic_info(*),
-        engagement(*),
-        documents(*),
-        preferences(*)
-      `)
-      .eq("supabase_uid", supabaseUid)
+      .from('users')
+      .select('*')
+      .eq('supabase_uid', supabaseUid)
       .maybeSingle();
 
     if (error) {
@@ -184,76 +37,126 @@ export const getUserProfile = async (supabaseUid: string): Promise<UserProfile |
       return null;
     }
 
-    console.log("User profile fetched successfully:", data);
+    console.log("User profile found:", data);
     return data as UserProfile;
   } catch (error) {
-    console.error("Error fetching user profile:", error);
+    console.error("Unexpected error fetching user profile:", error);
     return null;
   }
 };
 
-export const getAllUsers = async (): Promise<UserProfile[]> => {
+export const createUserProfile = async (profileData: Omit<UserProfile, 'id' | 'created_at' | 'updated_at'>): Promise<UserProfile | null> => {
   try {
+    console.log("Creating user profile for Supabase UID:", profileData.supabase_uid);
+    console.log("Profile data:", profileData);
+
+    // First check if user already exists
+    const existingUser = await getUserProfile(profileData.supabase_uid);
+    if (existingUser) {
+      console.log("User profile already exists, returning existing profile");
+      return existingUser;
+    }
+
+    // Check for duplicate hall ticket
+    console.log("Checking hall ticket via RPC:", profileData.hall_ticket);
+    const { data: hallTicketExists, error: hallTicketError } = await supabase
+      .rpc('check_hall_ticket_exists', { p_hall_ticket: profileData.hall_ticket });
+
+    if (hallTicketError) {
+      console.error("Error checking hall ticket:", hallTicketError);
+      throw new Error("Failed to validate hall ticket");
+    }
+
+    if (hallTicketExists) {
+      console.error("Hall ticket already exists:", profileData.hall_ticket);
+      throw new Error("Hall ticket is already registered");
+    }
+
+    // Check for duplicate email
+    const { data: emailExists, error: emailError } = await supabase
+      .rpc('check_email_exists', { p_email: profileData.email });
+
+    if (emailError) {
+      console.error("Error checking email:", emailError);
+      throw new Error("Failed to validate email");
+    }
+
+    if (emailExists) {
+      console.error("Email already exists:", profileData.email);
+      throw new Error("Email is already registered");
+    }
+
+    // Create the user profile
     const { data, error } = await supabase
-      .from("users")
-      .select(`
-        id,
-        supabase_uid,
-        full_name,
-        hall_ticket,
-        email,
-        department,
-        academic_year,
-        phone_number,
-        email_verified,
-        created_at,
-        updated_at,
-        profile_picture_url,
-        is_active
-      `)
-      .order('full_name', { ascending: true });
+      .from('users')
+      .insert([profileData])
+      .select()
+      .single();
 
     if (error) {
-      console.error("Error fetching all users:", error);
-      return [];
+      console.error("Error creating user profile:", error);
+      throw error;
     }
-    
-    return (data || []).map(user => ({
-      ...user,
-      academic_info: null,
-      engagement: null,  
-      documents: [],
-      preferences: null
-    })) as UserProfile[];
 
+    console.log("User profile created successfully:", data);
+    return data as UserProfile;
   } catch (error) {
-    console.error("Error fetching all users:", error);
-    return [];
+    console.error("Error in createUserProfile:", error);
+    throw error;
   }
 };
 
-export const updateUserProfile = async (
-  supabaseUid: string,
-  updates: {
-    full_name?: string;
-    phone_number?: string;
-  }
-): Promise<UserProfile | null> => {
+export const updateUserProfile = async (id: string, updates: Partial<UserProfile>): Promise<UserProfile | null> => {
   try {
-    const { error } = await supabase
-      .from("users")
+    const { data, error } = await supabase
+      .from('users')
       .update(updates)
-      .eq("supabase_uid", supabaseUid);
+      .eq('id', id)
+      .select()
+      .single();
 
     if (error) {
       console.error("Error updating user profile:", error);
-      return null;
+      throw error;
     }
 
-    // After successful update, fetch the full profile to get all relations
-    return await getUserProfile(supabaseUid);
+    return data as UserProfile;
   } catch (error) {
-    console.error("Error updating user profile:", error);
-    return null;
+    console.error("Error in updateUserProfile:", error);
+    throw error;
+  }
+};
+
+export const checkHallTicketExists = async (hallTicket: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .rpc('check_hall_ticket_exists', { p_hall_ticket: hallTicket });
+
+    if (error) {
+      console.error("Error checking hall ticket:", error);
+      return false;
+    }
+
+    return data || false;
+  } catch (error) {
+    console.error("Error in checkHallTicketExists:", error);
+    return false;
+  }
+};
+
+export const checkEmailExists = async (email: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .rpc('check_email_exists', { p_email: email });
+
+    if (error) {
+      console.error("Error checking email:", error);
+      return false;
+    }
+
+    return data || false;
+  } catch (error) {
+    console.error("Error in checkEmailExists:", error);
+    return false;
   }
 };
