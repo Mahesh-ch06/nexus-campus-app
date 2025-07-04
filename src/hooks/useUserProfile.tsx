@@ -8,21 +8,36 @@ export const useUserProfile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fetchAttempted, setFetchAttempted] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!user) {
       setProfile(null);
       setLoading(false);
+      setFetchAttempted(false);
+      return;
+    }
+
+    // Prevent multiple simultaneous fetches
+    if (fetchAttempted && loading) {
+      console.log("Profile fetch already in progress, skipping...");
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
+      setFetchAttempted(true);
       console.log("Fetching profile for user:", user.id);
       
       const userProfile = await getUserProfile(user.id);
-      setProfile(userProfile);
+      if (userProfile) {
+        setProfile(userProfile);
+        console.log("Profile loaded successfully");
+      } else {
+        console.log("No profile found for user, profile needs to be created");
+        setProfile(null);
+      }
     } catch (err) {
       console.error("Failed to fetch profile:", err);
       setError("Failed to load profile");
@@ -30,18 +45,29 @@ export const useUserProfile = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, fetchAttempted, loading]);
 
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && user && !fetchAttempted) {
       fetchProfile();
+    } else if (!authLoading && !user) {
+      // User is not authenticated, reset everything
+      setProfile(null);
+      setLoading(false);
+      setError(null);
+      setFetchAttempted(false);
     }
-  }, [user, authLoading, fetchProfile]);
+  }, [user, authLoading, fetchProfile, fetchAttempted]);
+
+  const refetch = useCallback(() => {
+    setFetchAttempted(false);
+    fetchProfile();
+  }, [fetchProfile]);
 
   return { 
     profile, 
     loading: loading || authLoading, 
     error,
-    refetch: fetchProfile 
+    refetch 
   };
 };

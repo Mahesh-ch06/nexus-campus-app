@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,8 +7,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -15,8 +16,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
-  signUp: async () => ({ error: null }),
   signIn: async () => ({ error: null }),
+  signUp: async () => ({ error: null }),
   signOut: async () => {},
 });
 
@@ -38,107 +39,64 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('[Auth] 🚀 Initializing Supabase AuthProvider...');
+    console.log("[Auth] 🚀 Initializing Supabase AuthProvider...");
     
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[Auth] Initial session:', session?.user?.email || 'No session');
+      console.log("[Auth] Initial session:", session ? `User: ${session.user?.email}` : "No session");
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log(`[Auth] Auth state changed: ${event}`, session?.user?.email || 'No user');
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("[Auth] Auth state changed:", event, session?.user ? session.user.email : "No user");
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
 
-    return () => {
-      console.log('[Auth] 🧹 Cleaning up auth listener');
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string) => {
-    try {
-      console.log('[Auth] 📝 Signing up user:', email);
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`
-        }
-      });
-
-      if (error) {
-        console.error('[Auth] ❌ Sign up error:', error);
-        return { error };
-      }
-
-      console.log('[Auth] ✅ Sign up successful:', data.user?.email);
-      return { error: null };
-    } catch (error) {
-      console.error('[Auth] ❌ Sign up exception:', error);
-      return { error };
-    }
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { error };
   };
 
-  const signIn = async (email: string, password: string) => {
-    try {
-      console.log('[Auth] 🔑 Signing in user:', email);
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('[Auth] ❌ Sign in error:', error);
-        return { error };
+  const signUp = async (email: string, password: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl
       }
-
-      console.log('[Auth] ✅ Sign in successful:', data.user?.email);
-      return { error: null };
-    } catch (error) {
-      console.error('[Auth] ❌ Sign in exception:', error);
-      return { error };
-    }
+    });
+    return { error };
   };
 
   const signOut = async () => {
-    try {
-      console.log('[Auth] 🚪 Signing out...');
-      
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('[Auth] ❌ Sign out error:', error);
-        throw error;
-      }
-      
-      console.log('[Auth] ✅ Sign out successful');
-    } catch (error) {
-      console.error('[Auth] ❌ Sign out exception:', error);
-      throw error;
-    }
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   };
 
   const value = {
     user,
     session,
     loading,
-    signUp,
     signIn,
+    signUp,
     signOut,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  console.log(`Debug: User authenticated: ${!!user}, Profile loaded: ${loading ? 'Loading...' : 'Loaded'} - ${loading ? 'Profile is still loading...' : 'Profile load complete'}`);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
