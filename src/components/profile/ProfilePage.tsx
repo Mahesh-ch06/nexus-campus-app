@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -132,8 +133,20 @@ export const ProfilePage = () => {
         return;
       }
 
-      // Create the profile
-      const createdProfile = await createUserProfile(user, newProfileData);
+      // Fix: Pass single profile data object instead of user and newProfileData separately
+      const profileData = {
+        supabase_uid: user.id,
+        full_name: fullName,
+        email: user.email || '',
+        phone_number: phoneNumber,
+        department: department,
+        academic_year: academicYear,
+        hall_ticket: hallTicket,
+        is_active: true,
+        email_verified: user.email_confirmed_at !== null,
+      };
+
+      const createdProfile = await createUserProfile(profileData);
       if (createdProfile) {
         toast.success("Profile created successfully!");
         await refetch();

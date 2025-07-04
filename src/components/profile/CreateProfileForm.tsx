@@ -73,7 +73,20 @@ export const CreateProfileForm = ({ onSuccess }: CreateProfileFormProps) => {
         return;
       }
 
-      const createdProfile = await createUserProfile(user, formData);
+      // Fix: Pass single profile data object instead of user and formData separately
+      const profileData = {
+        supabase_uid: user.id,
+        full_name: fullName,
+        email: user.email || '',
+        phone_number: phoneNumber,
+        department: department,
+        academic_year: academicYear,
+        hall_ticket: hallTicket,
+        is_active: true,
+        email_verified: user.email_confirmed_at !== null,
+      };
+
+      const createdProfile = await createUserProfile(profileData);
       if (createdProfile) {
         toast.success("🎉 Welcome to CampusConnect! Your profile has been created successfully!");
         onSuccess();

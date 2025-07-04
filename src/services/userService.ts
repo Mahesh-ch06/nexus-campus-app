@@ -15,6 +15,23 @@ export interface UserProfile {
   email_verified: boolean;
   created_at?: string;
   updated_at?: string;
+  // Add missing properties
+  academic_info?: {
+    cgpa?: number;
+    current_semester?: number;
+    subjects_enrolled?: string[];
+  };
+  engagement?: {
+    activity_points?: number;
+    events_attended?: string[];
+    feedback_count?: number;
+    badges?: string[];
+  };
+  preferences?: {
+    theme?: string;
+    language?: string;
+    notifications_enabled?: boolean;
+  };
 }
 
 export const getUserProfile = async (supabaseUid: string): Promise<UserProfile | null> => {
@@ -158,5 +175,25 @@ export const checkEmailExists = async (email: string): Promise<boolean> => {
   } catch (error) {
     console.error("Error in checkEmailExists:", error);
     return false;
+  }
+};
+
+// Add the missing getAllUsers function
+export const getAllUsers = async (): Promise<UserProfile[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Error fetching all users:", error);
+      return [];
+    }
+
+    return data as UserProfile[];
+  } catch (error) {
+    console.error("Error in getAllUsers:", error);
+    return [];
   }
 };
