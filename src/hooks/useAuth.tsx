@@ -41,15 +41,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     console.log("[Auth] 🚀 Initializing Supabase AuthProvider...");
     
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("[Auth] Initial session:", session ? `User: ${session.user?.email}` : "No session");
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("[Auth] Auth state changed:", event, session?.user ? session.user.email : "No user");
@@ -58,6 +50,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setLoading(false);
       }
     );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("[Auth] Initial session:", session ? `User: ${session.user?.email}` : "No session");
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -96,7 +96,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signOut,
   };
 
-  console.log(`Debug: User authenticated: ${!!user}, Profile loaded: ${loading ? 'Loading...' : 'Loaded'} - ${loading ? 'Profile is still loading...' : 'Profile load complete'}`);
+  console.log(`Debug: User authenticated: ${!!user}, Loading: ${loading}`);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

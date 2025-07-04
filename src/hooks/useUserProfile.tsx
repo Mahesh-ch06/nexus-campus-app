@@ -8,26 +8,17 @@ export const useUserProfile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [fetchAttempted, setFetchAttempted] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!user) {
       setProfile(null);
       setLoading(false);
-      setFetchAttempted(false);
-      return;
-    }
-
-    // Prevent multiple simultaneous fetches
-    if (fetchAttempted && loading) {
-      console.log("Profile fetch already in progress, skipping...");
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
-      setFetchAttempted(true);
       console.log("Fetching profile for user:", user.id);
       
       const userProfile = await getUserProfile(user.id);
@@ -45,22 +36,22 @@ export const useUserProfile = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, fetchAttempted, loading]);
+  }, [user]);
 
   useEffect(() => {
-    if (!authLoading && user && !fetchAttempted) {
-      fetchProfile();
-    } else if (!authLoading && !user) {
-      // User is not authenticated, reset everything
-      setProfile(null);
-      setLoading(false);
-      setError(null);
-      setFetchAttempted(false);
+    if (!authLoading) {
+      if (user) {
+        fetchProfile();
+      } else {
+        // User is not authenticated, reset everything
+        setProfile(null);
+        setLoading(false);
+        setError(null);
+      }
     }
-  }, [user, authLoading, fetchProfile, fetchAttempted]);
+  }, [user, authLoading, fetchProfile]);
 
   const refetch = useCallback(() => {
-    setFetchAttempted(false);
     fetchProfile();
   }, [fetchProfile]);
 
