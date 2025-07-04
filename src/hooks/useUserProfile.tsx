@@ -37,7 +37,6 @@ export const useUserProfile = () => {
       } else {
         console.log("No profile found for user, profile needs to be created");
         setProfile(null);
-        // Don't set this as an error - just indicate no profile exists
       }
     } catch (err) {
       console.error("Failed to fetch profile:", err);
