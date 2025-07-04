@@ -41,25 +41,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     console.log("[Auth] 🚀 Initializing Supabase AuthProvider...");
     
-    // Get initial session first
-    const getInitialSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error("[Auth] Error getting initial session:", error);
-        } else {
-          console.log("[Auth] Initial session:", session ? `User: ${session.user?.email}` : "No session");
-          setSession(session);
-          setUser(session?.user ?? null);
-        }
-      } catch (error) {
-        console.error("[Auth] Exception getting initial session:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getInitialSession();
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("[Auth] Initial session:", session ? `User: ${session.user?.email}` : "No session");
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -67,18 +55,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         console.log("[Auth] Auth state changed:", event, session?.user ? session.user.email : "No user");
         setSession(session);
         setUser(session?.user ?? null);
-        
-        // Only set loading to false after we've processed the auth change
-        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     );
 
-    return () => {
-      console.log("[Auth] Cleaning up auth subscription");
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -115,7 +96,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signOut,
   };
 
-  console.log(`[Auth] Provider state - User: ${!!user}, Loading: ${loading}, Session: ${!!session}`);
+  console.log(`Debug: User authenticated: ${!!user}, Profile loaded: ${loading ? 'Loading...' : 'Loaded'} - ${loading ? 'Profile is still loading...' : 'Profile load complete'}`);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
