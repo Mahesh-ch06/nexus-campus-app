@@ -12,15 +12,17 @@ export const useUserProfile = () => {
 
   const fetchProfile = useCallback(async () => {
     if (!user) {
+      console.log("[Profile] No user, clearing profile state");
       setProfile(null);
       setLoading(false);
       setFetchAttempted(false);
+      setError(null);
       return;
     }
 
     // Prevent multiple simultaneous fetches
     if (fetchAttempted && loading) {
-      console.log("Profile fetch already in progress, skipping...");
+      console.log("[Profile] Fetch already in progress, skipping...");
       return;
     }
 
@@ -28,19 +30,19 @@ export const useUserProfile = () => {
       setLoading(true);
       setError(null);
       setFetchAttempted(true);
-      console.log("Fetching profile for user:", user.id);
+      console.log("[Profile] Fetching profile for user:", user.id);
       
       const userProfile = await getUserProfile(user.id);
       if (userProfile) {
         setProfile(userProfile);
-        console.log("Profile loaded successfully");
+        console.log("[Profile] Profile loaded successfully");
       } else {
-        console.log("No profile found for user, profile needs to be created");
+        console.log("[Profile] No profile found for user, profile needs to be created");
         setProfile(null);
         // Don't set this as an error - just indicate no profile exists
       }
     } catch (err) {
-      console.error("Failed to fetch profile:", err);
+      console.error("[Profile] Failed to fetch profile:", err);
       setError("Failed to load profile");
       setProfile(null);
     } finally {
@@ -49,10 +51,18 @@ export const useUserProfile = () => {
   }, [user, fetchAttempted, loading]);
 
   useEffect(() => {
-    if (!authLoading && user && !fetchAttempted) {
+    // Wait for auth to finish loading before attempting to fetch profile
+    if (authLoading) {
+      console.log("[Profile] Waiting for auth to finish loading...");
+      return;
+    }
+
+    if (user && !fetchAttempted) {
+      console.log("[Profile] Auth completed, fetching profile...");
       fetchProfile();
-    } else if (!authLoading && !user) {
+    } else if (!user) {
       // User is not authenticated, reset everything
+      console.log("[Profile] No authenticated user, resetting profile state");
       setProfile(null);
       setLoading(false);
       setError(null);
@@ -65,9 +75,14 @@ export const useUserProfile = () => {
     fetchProfile();
   }, [fetchProfile]);
 
+  // Overall loading state should consider both auth and profile loading
+  const overallLoading = authLoading || loading;
+
+  console.log(`[Profile] State - Auth Loading: ${authLoading}, Profile Loading: ${loading}, User: ${!!user}, Profile: ${!!profile}`);
+
   return { 
     profile, 
-    loading: loading || authLoading, 
+    loading: overallLoading, 
     error,
     refetch 
   };
