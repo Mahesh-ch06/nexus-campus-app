@@ -14,7 +14,7 @@ interface CreateProfileFormProps {
 }
 
 export const CreateProfileForm = ({ onSuccess }: CreateProfileFormProps) => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -43,8 +43,12 @@ export const CreateProfileForm = ({ onSuccess }: CreateProfileFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      toast.error("You must be logged in to create a profile.");
+    
+    console.log("[CreateProfile] Form submitted", { user: !!user, session: !!session });
+    
+    if (!user || !session) {
+      console.error("[CreateProfile] No user or session available");
+      toast.error("Authentication required. Please log in again.");
       return;
     }
 
@@ -66,6 +70,7 @@ export const CreateProfileForm = ({ onSuccess }: CreateProfileFormProps) => {
 
     setIsCreating(true);
     try {
+      console.log("[CreateProfile] Checking hall ticket existence...");
       const hallTicketExists = await checkHallTicketExists(hallTicket);
       if (hallTicketExists) {
         toast.error("This Hall Ticket number is already registered.");
@@ -73,16 +78,20 @@ export const CreateProfileForm = ({ onSuccess }: CreateProfileFormProps) => {
         return;
       }
 
+      console.log("[CreateProfile] Creating profile...", formData);
       const createdProfile = await createUserProfile(user, formData);
+      
       if (createdProfile) {
+        console.log("[CreateProfile] Profile created successfully!");
         toast.success("🎉 Welcome to CampusConnect! Your profile has been created successfully!");
         onSuccess();
       } else {
-        toast.error("Failed to create profile. Please try again.");
+        console.error("[CreateProfile] Profile creation returned null");
+        toast.error("Failed to create profile. Please check your information and try again.");
       }
     } catch (error) {
-      console.error("Profile creation error:", error);
-      toast.error("An unexpected error occurred during profile creation.");
+      console.error("[CreateProfile] Profile creation error:", error);
+      toast.error("An unexpected error occurred during profile creation. Please try again.");
     } finally {
       setIsCreating(false);
     }

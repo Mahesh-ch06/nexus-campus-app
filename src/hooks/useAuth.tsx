@@ -41,25 +41,50 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     console.log("[Auth] 🚀 Initializing Supabase AuthProvider...");
     
+    let mounted = true;
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("[Auth] Auth state changed:", event, session?.user ? session.user.email : "No user");
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("[Auth] Initial session:", session ? `User: ${session.user?.email}` : "No session");
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log("[Auth] Initial session:", session ? `User: ${session.user?.email}` : "No session");
+        
+        if (error) {
+          console.error("[Auth] Error getting session:", error);
+        }
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("[Auth] Exception getting session:", error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    getInitialSession();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -96,7 +121,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signOut,
   };
 
-  console.log(`Debug: User authenticated: ${!!user}, Loading: ${loading}`);
+  console.log(`[Auth] Current state - User: ${!!user}, Loading: ${loading}, Session: ${!!session}`);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
