@@ -70,7 +70,7 @@ export const useUserProfile = () => {
       setLoading(false);
       setError(null);
     }
-  }, [user?.id, authLoading, session?.access_token, fetchProfile]);
+  }, [user?.id, authLoading, session?.access_token]); // Removed fetchProfile from dependencies
 
   const refetch = useCallback(() => {
     console.log("[Profile] Manual refetch requested");
