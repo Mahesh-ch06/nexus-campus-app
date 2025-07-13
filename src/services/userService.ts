@@ -113,6 +113,36 @@ export const createUserProfile = async (
     console.log("Supabase user email:", supabaseUser.email);
     console.log("Additional data:", additionalData);
 
+    // First check if user profile already exists
+    const existingProfile = await getUserProfile(supabaseUser.id);
+    if (existingProfile) {
+      console.log("User profile already exists, updating it:", existingProfile);
+      // If profile exists, update it instead of creating a new one
+      const updateData = {
+        full_name: additionalData.fullName,
+        hall_ticket: additionalData.hallTicket,
+        department: additionalData.department,
+        academic_year: additionalData.academicYear,
+        phone_number: additionalData.phoneNumber,
+        email_verified: supabaseUser.email_confirmed_at !== null,
+      };
+
+      const { data, error } = await supabase
+        .from("users")
+        .update(updateData)
+        .eq("supabase_uid", supabaseUser.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating user profile:", error);
+        return null;
+      }
+
+      console.log("User profile updated successfully:", data);
+      return await getUserProfile(supabaseUser.id);
+    }
+
     const insertData = {
       supabase_uid: supabaseUser.id,
       full_name: additionalData.fullName,
@@ -124,7 +154,7 @@ export const createUserProfile = async (
       email_verified: supabaseUser.email_confirmed_at !== null,
     };
 
-    console.log("Inserting data:", insertData);
+    console.log("Inserting new profile data:", insertData);
 
     // Insert the user profile using the permissive RLS policy
     const { data, error } = await supabase
