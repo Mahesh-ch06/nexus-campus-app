@@ -21,6 +21,7 @@ import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { LeaderboardPage } from "@/components/dashboard/LeaderboardPage";
 import { CampusStorePage } from "@/components/store/CampusStorePage";
 import { AutoProfileSetup } from "@/components/profile/AutoProfileSetup";
+import { ProfileDebugTest } from "@/components/profile/ProfileDebugTest";
 
 const Dashboard = () => {
   const [activeSection, setActiveSection] = useState("overview");
@@ -255,6 +256,9 @@ const Dashboard = () => {
           
           {activeSection === "overview" && (
             <div className="space-y-4 sm:space-y-6 lg:space-y-8 animate-fade-in">
+              {/* Debug Test - Temporary */}
+              <ProfileDebugTest />
+              
               <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 text-white">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                   <div>
