@@ -230,7 +230,16 @@ export const getUserProfile = async (supabaseUid: string): Promise<UserProfile |
       return null;
     }
 
-    console.log("User profile fetched successfully:", data);
+    console.log("User profile fetched successfully:", data.full_name);
+    console.log("Profile data:", {
+      id: data.id,
+      full_name: data.full_name,
+      email: data.email,
+      has_academic_info: !!data.academic_info,
+      has_engagement: !!data.engagement,
+      has_preferences: !!data.preferences
+    });
+    
     return data as UserProfile;
   } catch (error) {
     console.error("Error fetching user profile:", error);

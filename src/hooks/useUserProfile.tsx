@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { UserProfile, getUserProfile } from '@/services/userService';
 
@@ -8,26 +7,27 @@ export const useUserProfile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Use ref to track if we're currently fetching to prevent duplicate calls
+  const fetchingRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
 
-  const fetchProfile = useCallback(async () => {
-    if (!user || !session) {
-      console.log("[Profile] No user or session, clearing profile");
-      setProfile(null);
-      setLoading(false);
-      setError(null);
+  const fetchProfile = useCallback(async (userId: string) => {
+    // Prevent duplicate calls
+    if (fetchingRef.current || lastUserIdRef.current === userId) {
+      console.log("[Profile] Skipping fetch - already fetching or same user ID");
       return;
     }
+
+    fetchingRef.current = true;
+    lastUserIdRef.current = userId;
 
     try {
       setLoading(true);
       setError(null);
-      console.log("[Profile] Fetching profile for user:", user.id);
+      console.log("[Profile] Fetching profile for user:", userId);
       
-      // Add a small delay to prevent flash of loading state for cached data
-      const [userProfile] = await Promise.all([
-        getUserProfile(user.id),
-        new Promise(resolve => setTimeout(resolve, 100)) // Minimum loading time
-      ]);
+      const userProfile = await getUserProfile(userId);
       
       if (userProfile) {
         console.log("[Profile] Profile loaded successfully:", userProfile.full_name);
@@ -42,29 +42,44 @@ export const useUserProfile = () => {
       setProfile(null);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
-  }, [user, session]);
+  }, []);
 
   useEffect(() => {
     console.log("[Profile] Auth state changed - User:", !!user, "Auth Loading:", authLoading, "Session:", !!session);
     
-    if (!authLoading) {
-      if (user && session) {
-        fetchProfile();
-      } else {
-        // User is not authenticated, reset everything
-        console.log("[Profile] User not authenticated, clearing profile state");
-        setProfile(null);
-        setLoading(false);
-        setError(null);
-      }
+    // Reset refs when user changes or logs out
+    if (!user) {
+      fetchingRef.current = false;
+      lastUserIdRef.current = null;
+      setProfile(null);
+      setLoading(false);
+      setError(null);
+      return;
     }
-  }, [user, authLoading, session, fetchProfile]);
+    
+    // Only proceed if auth is not loading and we have a user
+    if (!authLoading && user && session) {
+      console.log("[Profile] User authenticated, checking if fetch needed...");
+      fetchProfile(user.id);
+    } else if (!authLoading && !user) {
+      // User is not authenticated, reset everything
+      console.log("[Profile] User not authenticated, clearing profile state");
+      setProfile(null);
+      setLoading(false);
+      setError(null);
+    }
+  }, [user?.id, authLoading, session?.access_token, fetchProfile]);
 
   const refetch = useCallback(() => {
     console.log("[Profile] Manual refetch requested");
-    fetchProfile();
-  }, [fetchProfile]);
+    fetchingRef.current = false; // Reset fetch guard
+    lastUserIdRef.current = null; // Reset user ID guard
+    if (user?.id) {
+      fetchProfile(user.id);
+    }
+  }, [user?.id, fetchProfile]);
 
   console.log(`[Profile] Current state - Profile: ${!!profile}, Loading: ${loading}, Error: ${error}`);
 
