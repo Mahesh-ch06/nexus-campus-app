@@ -62,6 +62,22 @@ export interface UserProfile {
   preferences: Preferences | null;
 }
 
+// Helper function to check if a profile is complete
+export const isProfileComplete = (profile: UserProfile | null): boolean => {
+  if (!profile) return false;
+  
+  const requiredFields = [
+    profile.full_name,
+    profile.hall_ticket,
+    profile.email,
+    profile.department,
+    profile.academic_year,
+    profile.phone_number
+  ];
+  
+  return requiredFields.every(field => field && field.trim().length > 0);
+};
+
 export const checkHallTicketExists = async (hallTicket: string): Promise<boolean> => {
   try {
     console.log("Checking hall ticket via RPC:", hallTicket);

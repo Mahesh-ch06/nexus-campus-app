@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
-import { createUserProfile, checkHallTicketExists } from "@/services/userService";
+import { createUserProfile, checkHallTicketExists, isProfileComplete } from "@/services/userService";
 import { toast } from "sonner";
 
 const ProfilePageSkeleton = () => (
@@ -152,8 +152,8 @@ export const ProfilePage = () => {
     setNewProfileData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // If user is authenticated but no profile exists, show the profile creation form
-  if (user && !profile) {
+  // If user is authenticated but no profile exists, or profile is incomplete, show the profile creation form
+  if (user && (!profile || !isProfileComplete(profile))) {
     return (
       <Card className="soft-shadow animate-fade-in max-w-2xl mx-auto">
         <CardHeader>
