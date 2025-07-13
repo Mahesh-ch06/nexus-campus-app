@@ -220,16 +220,8 @@ export const getUserProfile = async (supabaseUid: string): Promise<UserProfile |
       .eq("supabase_uid", supabaseUid)
       .maybeSingle();
 
-    console.log("Profile query result:", { data, error, hasData: !!data });
-
     if (error) {
       console.error("Error fetching user profile:", error);
-      console.error("Error details:", {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      });
       return null;
     }
 
@@ -250,7 +242,7 @@ export const getUserProfile = async (supabaseUid: string): Promise<UserProfile |
     
     return data as UserProfile;
   } catch (error) {
-    console.error("Exception while fetching user profile:", error);
+    console.error("Error fetching user profile:", error);
     return null;
   }
 };
