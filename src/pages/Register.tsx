@@ -99,10 +99,11 @@ const Register = () => {
       const { error: signUpError } = await signUp(formData.email, formData.password);
       
       if (signUpError) {
-        setError(signUpError.message);
+        const errorMessage = signUpError.message || "Registration failed. Please try again.";
+        setError(errorMessage);
         toast({
           title: "Registration Failed",
-          description: signUpError.message,
+          description: errorMessage,
           variant: "destructive",
         });
         setLoading(false);
@@ -117,10 +118,11 @@ const Register = () => {
       navigate("/login");
     } catch (err: any) {
       console.error("Registration error:", err);
-      setError(err.message);
+      const errorMessage = err.message || "Network error. Please check your connection.";
+      setError(errorMessage);
       toast({
         title: "Registration Failed",
-        description: "An unexpected error occurred.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

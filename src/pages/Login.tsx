@@ -32,10 +32,11 @@ const Login = () => {
       const { error: signInError } = await signIn(email, password);
       
       if (signInError) {
-        setError(signInError.message);
+        const errorMessage = signInError.message || "Login failed. Please try again.";
+        setError(errorMessage);
         toast({
           title: "Login Failed",
-          description: signInError.message,
+          description: errorMessage,
           variant: "destructive",
         });
       } else {
@@ -46,10 +47,11 @@ const Login = () => {
         navigate("/dashboard");
       }
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err.message || "Network error. Please check your connection.";
+      setError(errorMessage);
       toast({
         title: "Login Failed",
-        description: "An unexpected error occurred.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

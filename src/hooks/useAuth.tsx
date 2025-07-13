@@ -88,28 +88,64 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    try {
+      console.log("[Auth] Attempting sign in for:", email);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        console.error("[Auth] Sign in error:", error.message);
+        return { error };
+      }
+      
+      console.log("[Auth] Sign in successful:", data.user?.email);
+      return { error: null };
+    } catch (err: any) {
+      console.error("[Auth] Sign in exception:", err);
+      return { error: { message: "Network error. Please check your connection." } };
+    }
   };
 
   const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl
+    try {
+      console.log("[Auth] Attempting sign up for:", email);
+      const redirectUrl = `${window.location.origin}/`;
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      });
+      
+      if (error) {
+        console.error("[Auth] Sign up error:", error.message);
+        return { error };
       }
-    });
-    return { error };
+      
+      console.log("[Auth] Sign up successful:", data.user?.email);
+      return { error: null };
+    } catch (err: any) {
+      console.error("[Auth] Sign up exception:", err);
+      return { error: { message: "Network error. Please check your connection." } };
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      console.log("[Auth] Attempting sign out");
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("[Auth] Sign out error:", error);
+        throw error;
+      }
+      console.log("[Auth] Sign out successful");
+    } catch (err: any) {
+      console.error("[Auth] Sign out exception:", err);
+      throw err;
+    }
   };
 
   const value = {
