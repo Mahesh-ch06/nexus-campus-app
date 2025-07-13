@@ -23,7 +23,12 @@ export const useUserProfile = () => {
       setError(null);
       console.log("[Profile] Fetching profile for user:", user.id);
       
-      const userProfile = await getUserProfile(user.id);
+      // Add a small delay to prevent flash of loading state for cached data
+      const [userProfile] = await Promise.all([
+        getUserProfile(user.id),
+        new Promise(resolve => setTimeout(resolve, 100)) // Minimum loading time
+      ]);
+      
       if (userProfile) {
         console.log("[Profile] Profile loaded successfully:", userProfile.full_name);
         setProfile(userProfile);

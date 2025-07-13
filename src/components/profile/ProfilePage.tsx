@@ -135,7 +135,7 @@ export const ProfilePage = () => {
       // Create the profile
       const createdProfile = await createUserProfile(user, newProfileData);
       if (createdProfile) {
-        toast.success("Profile created successfully!");
+        toast.success("🎉 Profile created successfully! Welcome to CampusConnect!");
         await refetch();
       } else {
         toast.error("Failed to create profile. Please try again.");
@@ -152,13 +152,14 @@ export const ProfilePage = () => {
     setNewProfileData((prev) => ({ ...prev, [field]: value }));
   };
 
-  if (!profile) {
+  // If user is authenticated but no profile exists, show the profile creation form
+  if (user && !profile) {
     return (
       <Card className="soft-shadow animate-fade-in max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle>Create Your Profile</CardTitle>
+          <CardTitle>Complete Your Profile</CardTitle>
           <CardDescription>
-            Welcome! Please provide your details to set up your student profile.
+            We need a few more details to set up your student profile. This information helps us provide you with a personalized experience.
           </CardDescription>
         </CardHeader>
         <CardContent>

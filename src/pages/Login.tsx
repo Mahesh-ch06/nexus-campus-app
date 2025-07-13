@@ -44,7 +44,10 @@ const Login = () => {
           title: "Welcome back!",
           description: "You have successfully logged in.",
         });
-        navigate("/dashboard");
+        // Use a slight delay to ensure auth state is updated
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 100);
       }
     } catch (err: any) {
       const errorMessage = err.message || "Network error. Please check your connection.";

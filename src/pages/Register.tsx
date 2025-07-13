@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { createUserProfile, checkHallTicketExists, checkEmailExists } from "@/services/userService";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, User, Mail, Phone, GraduationCap, Eye, EyeOff } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -110,10 +111,42 @@ const Register = () => {
         return;
       }
 
-      toast({
-        title: "Registration Successful!",
-        description: "Please check your email to verify your account.",
-      });
+      // Get the newly created user from Supabase Auth
+      const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+      
+      if (getUserError || !user) {
+        console.error("Error getting user after signup:", getUserError);
+        toast({
+          title: "Registration Warning",
+          description: "Account created but profile setup needed. Please log in to complete your profile.",
+        });
+        navigate("/login");
+        return;
+      }
+
+      // Automatically create the user profile with registration data
+      console.log("Creating user profile with registration data...");
+      const profileData = {
+        fullName: formData.fullName,
+        hallTicket: formData.hallTicket,
+        department: formData.department,
+        academicYear: formData.academicYear,
+        phoneNumber: formData.phoneNumber,
+      };
+
+      const createdProfile = await createUserProfile(user, profileData);
+      
+      if (createdProfile) {
+        toast({
+          title: "Registration Successful!",
+          description: "Your account and profile have been created. Please check your email to verify your account.",
+        });
+      } else {
+        toast({
+          title: "Registration Partially Complete",
+          description: "Account created but profile setup incomplete. Please log in to complete your profile.",
+        });
+      }
 
       navigate("/login");
     } catch (err: any) {

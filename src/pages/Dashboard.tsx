@@ -20,6 +20,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { LeaderboardPage } from "@/components/dashboard/LeaderboardPage";
 import { CampusStorePage } from "@/components/store/CampusStorePage";
+import { AutoProfileSetup } from "@/components/profile/AutoProfileSetup";
 
 const Dashboard = () => {
   const [activeSection, setActiveSection] = useState("overview");
@@ -103,7 +104,8 @@ const Dashboard = () => {
   const todayStr = format(new Date(), "MMMM d, yyyy");
 
   return (
-    <div className="min-h-screen bg-background">
+    <AutoProfileSetup>
+      <div className="min-h-screen bg-background">
       <div className="border-b border-border bg-card/95 backdrop-blur-xl sticky top-0 z-50">
         <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3">
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -492,9 +494,10 @@ const Dashboard = () => {
               </Button>
             </div>
           )}
-        </main>
+         </main>
+       </div>
       </div>
-    </div>
+    </AutoProfileSetup>
   );
 };
 
