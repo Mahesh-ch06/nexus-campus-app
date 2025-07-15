@@ -20,7 +20,6 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { LeaderboardPage } from "@/components/dashboard/LeaderboardPage";
 import { CampusStorePage } from "@/components/store/CampusStorePage";
-import { AutoProfileSetup } from "@/components/profile/AutoProfileSetup";
 
 const Dashboard = () => {
   const [activeSection, setActiveSection] = useState("overview");
@@ -104,8 +103,7 @@ const Dashboard = () => {
   const todayStr = format(new Date(), "MMMM d, yyyy");
 
   return (
-    <AutoProfileSetup>
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <div className="border-b border-border bg-card/95 backdrop-blur-xl sticky top-0 z-50">
         <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3">
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -288,7 +286,7 @@ const Dashboard = () => {
                 <Card className="shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardContent className="p-3 sm:p-4 lg:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 lg:space-x-4">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:w-12 rounded-xl lg:rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto sm:mx-0">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto sm:mx-0">
                         <Calendar className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-purple-500" />
                       </div>
                       <div className="text-center sm:text-left">
@@ -497,7 +495,6 @@ const Dashboard = () => {
          </main>
        </div>
       </div>
-    </AutoProfileSetup>
   );
 };
 
