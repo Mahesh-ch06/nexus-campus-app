@@ -634,7 +634,11 @@ const ResetPassword = () => {
                     </Alert>
                   )}
                   <Button type="submit" className="w-full h-12" disabled={loading || success}>
-                    {loading ? "Updating Password..." : success ? "Password Updated!" : "Update Password"}
+                    {success
+                      ? "Password Updated!"
+                      : loading
+                        ? (error ? "Update Password" : "Updating Password...")
+                        : "Update Password"}
                   </Button>
                 </form>
               )}
