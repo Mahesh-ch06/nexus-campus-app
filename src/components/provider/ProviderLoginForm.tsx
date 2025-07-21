@@ -147,11 +147,9 @@ export const ProviderLoginForm = () => {
         </div>
       </div>
       <ForgotPasswordDialog
-        isOpen={isForgotPassOpen}
-        onClose={() => setIsForgotPassOpen(false)}
-        onPasswordReset={handleForgotPassword}
-        isLoading={isLoading}
-        defaultEmail={email}
+        open={isForgotPassOpen}
+        onOpenChange={setIsForgotPassOpen}
+        mode="email"
       />
     </>
   );

@@ -42,6 +42,9 @@ import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { usePoints } from "@/hooks/usePoints";
 
+import { supabase } from "@/integrations/supabase/client";
+
+
 // Define the valid message types
 type MessageType = 'text' | 'link' | 'feature' | 'info' | 'founder' | 'leaderboard';
 
@@ -69,7 +72,21 @@ interface ChatBotProps {
   };
 }
 
+
 const ChatBot = ({ userProfile }: ChatBotProps) => {
+  // For menu and budget suggestions
+  const [todayMenu, setTodayMenu] = useState<any[]>([]);
+  const [menuLoading, setMenuLoading] = useState(false);
+  useEffect(() => {
+    setMenuLoading(true);
+    supabase
+      .from('products')
+      .select('*')
+      .then(({ data }) => {
+        setTodayMenu(data || []);
+        setMenuLoading(false);
+      }, () => setMenuLoading(false));
+  }, []);
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
@@ -309,64 +326,88 @@ Instructions:
     } catch (error) {
       console.error('Google AI API Error:', error);
       throw error;
+
     }
+  };
+
+  // Helper: Suggest a meal plan within a budget
+
+  const getMealPlanForBudget = (budget: number) => {
+    if (!todayMenu || todayMenu.length === 0) return null;
+    // Sort by price ascending, try to fill budget
+    let plan: any[] = [];
+    let total = 0;
+    for (const item of [...todayMenu].sort((a, b) => a.price - b.price)) {
+      if (total + item.price <= budget) {
+        plan.push(item);
+        total += item.price;
+      }
+    }
+    return { plan, total };
   };
 
   const getBotResponse = async (userMessage: string): Promise<{ content: string; type: MessageType; hasLinks: boolean }> => {
     const message = userMessage.toLowerCase();
     const firstName = getUserFirstName();
-    
-    // Campus-specific responses (always use local knowledge for these)
+
+    // Advanced: Today's menu
+    if (/(today('|’)s|today s|menu|what.*available|show.*menu|food list|lunch menu|dinner menu)/i.test(message)) {
+      if (menuLoading) {
+        return { content: "Fetching today's menu, please wait...", type: 'info', hasLinks: false };
+      }
+      if (!todayMenu || todayMenu.length === 0) {
+        return { content: "Sorry, today's menu is not available right now.", type: 'info', hasLinks: false };
+      }
+      const menuList = todayMenu.map((item: any) => `• ${item.name} - ₹${item.price}${item.quantity <= 0 ? ' (Out of stock)' : ''}`).join('\n');
+      return {
+        content: `🍽️ **Today's Menu:**\n\n${menuList}\n\n*You can order from the Campus Store!*`,
+        type: 'info',
+        hasLinks: false
+      };
+    }
+
+    // Advanced: Budget-based meal suggestion
+    const budgetMatch = message.match(/(?:budget|under|for|with)\s*₹?([0-9]{2,5})/i);
+    if (budgetMatch) {
+      const budget = parseInt(budgetMatch[1], 10);
+      if (menuLoading) {
+        return { content: 'Let me check the menu for your budget...', type: 'info', hasLinks: false };
+      }
+      const result = getMealPlanForBudget(budget);
+      if (!result || result.plan.length === 0) {
+        return { content: `Sorry, I couldn't find a meal plan under ₹${budget}. Try increasing your budget or check back later!`, type: 'info', hasLinks: false };
+      }
+      const planList = result.plan.map((item: any) => `• ${item.name} - ₹${item.price}`).join('\n');
+      return {
+        content: `🥗 **Meal Plan for ₹${budget}:**\n\n${planList}\n\n**Total:** ₹${result.total}\n\n*Tip: Add these to your cart from the Campus Store!*`,
+        type: 'info',
+        hasLinks: false
+      };
+    }
+
+    // Founder
     if (message.includes('founder') || message.includes('creator') || message.includes('mahesh') || message.includes('who made') || message.includes('who created')) {
       return {
-        content: `🚀 **About CampusConnect's Founder**
-
-CampusConnect was created by Mahesh Chitikeshi, a passionate developer dedicated to improving campus life for students!
-
-👨‍💻 **About Mahesh:**
-• Innovative software developer and tech enthusiast
-• Student-focused solution creator
-• Campus technology pioneer
-• Full-stack development expert
-• Open source contributor
-
-🎯 **His Vision:**
-To create a unified platform that makes campus life seamless, from food ordering to academic management, bringing all student services under one roof.
-
-🌟 **CampusConnect Impact:**
-• Streamlined campus operations
-• Enhanced student experience
-• Digital transformation of education
-• Community building through technology
-
-Connect with Mahesh on LinkedIn:
-https://www.linkedin.com/in/mahesh-chitikeshi-b7a0982b9/
-
-Want to collaborate or learn more? Reach out through his profile! 🔗`,
+        content: `🚀 **About CampusConnect's Founder**\n\nCampusConnect was created by Mahesh Chitikeshi, a passionate developer dedicated to improving campus life for students!\n\n👨‍💻 **About Mahesh:**\n• Innovative software developer and tech enthusiast\n• Student-focused solution creator\n• Campus technology pioneer\n• Full-stack development expert\n• Open source contributor\n\n🎯 **His Vision:**\nTo create a unified platform that makes campus life seamless, from food ordering to academic management, bringing all student services under one roof.\n\n🌟 **CampusConnect Impact:**\n• Streamlined campus operations\n• Enhanced student experience\n• Digital transformation of education\n• Community building through technology\n\nConnect with Mahesh on LinkedIn:\nhttps://www.linkedin.com/in/mahesh-chitikeshi-b7a0982b9/\n\nWant to collaborate or learn more? Reach out through his profile! 🔗`,
         type: 'founder',
         hasLinks: true
       };
     }
 
-    // Leaderboard rank queries - Using actual data from hooks
+    // Leaderboard rank queries
     if (message.includes('rank') || message.includes('leaderboard') || message.includes('my rank') || message.includes('position') || message.includes('ranking')) {
       const userPoints = currentPoints || profile?.engagement?.activity_points || 0;
       const userRankDisplay = leaderboardLoading ? 'Loading...' : 
                               currentUserRank ? `#${currentUserRank}` : 
                               currentUserData?.rank ? `#${currentUserData.rank}` : 'Not ranked yet';
-      
       const totalUsers = leaderboard?.length || 10;
       const currentData = currentUserData || leaderboard?.find(u => u.is_current_user);
-      
-      // Calculate percentile if we have rank data
       let percentile = 0;
       if (currentUserRank && totalUsers > 0) {
         percentile = Math.round(((totalUsers - currentUserRank) / totalUsers) * 100);
       } else if (currentData?.rank && totalUsers > 0) {
         percentile = Math.round(((totalUsers - currentData.rank) / totalUsers) * 100);
       }
-      
-      // Get status based on points
       const getStatus = (points: number) => {
         if (points >= 2000) return '👑 Elite Performer';
         if (points >= 1500) return '🌟 Top Performer';
@@ -375,123 +416,36 @@ Want to collaborate or learn more? Reach out through his profile! 🔗`,
         if (points >= 100) return '🌱 Getting Started';
         return '🆕 New Member';
       };
-
-      // Get recent activity info
       const recentTransactions = pointsHistory?.slice(0, 3) || [];
       const transactionText = recentTransactions.length > 0 
         ? `Recent Activity: ${recentTransactions.map(t => `${t.points > 0 ? '+' : ''}${t.points} pts`).join(', ')}`
         : 'No recent activity';
-      
       return {
-        content: `🏆 **Your Leaderboard Status, ${firstName}!**
-
-🎯 **Current Rankings:**
-• Your Position: ${userRankDisplay} out of ${totalUsers.toLocaleString()}+ students
-• Activity Points: ${userPoints.toLocaleString()} points
-• Status: ${getStatus(userPoints)}
-${percentile > 0 ? `• Percentile: Top ${100 - percentile}% (${percentile}th percentile)` : ''}
-
-📊 **Performance Insights:**
-• Total Transactions: ${pointsHistory?.length || 0}
-• ${transactionText}
-• Profile Complete: ${profile?.full_name && profile?.department ? '✅ Yes' : '⏳ Pending'}
-
-📈 **How to Improve Your Rank:**
-• Participate in campus events and activities (+50-100 points)
-• Join clubs and student organizations (+25-75 points)
-• Complete academic milestones (+20-50 points)
-• Use campus services through CampusConnect (+10-30 points)
-• Engage with the community (+15-40 points)
-• Attend workshops and skill programs (+30-80 points)
-
-🎉 **Current Achievements:**
-• ${userPoints >= 100 ? '✅ Active Participant' : '⏳ Starting Journey (need 100 pts)'}
-• ${userPoints >= 500 ? '✅ Community Contributor' : '🎯 Next Goal: 500 points'}
-• ${userPoints >= 1000 ? '✅ Campus Leader' : '🌟 Next Goal: 1000 points'}
-• ${userPoints >= 2000 ? '✅ Elite Status' : '👑 Next Goal: 2000 points'}
-
-💡 **Pro Tip:** Check the ${leaderboard?.length > 0 ? 'Leaderboard page' : 'Profile Activity section'} for detailed rankings and compete with fellow students!
-
-Keep up the great work, ${firstName}! 🌟`,
+        content: `🏆 **Your Leaderboard Status, ${firstName}!**\n\n🎯 **Current Rankings:**\n• Your Position: ${userRankDisplay} out of ${totalUsers.toLocaleString()}+ students\n• Activity Points: ${userPoints.toLocaleString()} points\n• Status: ${getStatus(userPoints)}\n${percentile > 0 ? `• Percentile: Top ${100 - percentile}% (${percentile}th percentile)` : ''}\n\n📊 **Performance Insights:**\n• Total Transactions: ${pointsHistory?.length || 0}\n• ${transactionText}\n• Profile Complete: ${profile?.full_name && profile?.department ? '✅ Yes' : '⏳ Pending'}\n\n📈 **How to Improve Your Rank:**\n• Participate in campus events and activities (+50-100 points)\n• Join clubs and student organizations (+25-75 points)\n• Complete academic milestones (+20-50 points)\n• Use campus services through CampusConnect (+10-30 points)\n• Engage with the community (+15-40 points)\n• Attend workshops and skill programs (+30-80 points)\n\n🎉 **Current Achievements:**\n• ${userPoints >= 100 ? '✅ Active Participant' : '⏳ Starting Journey (need 100 pts)'}\n• ${userPoints >= 500 ? '✅ Community Contributor' : '🎯 Next Goal: 500 points'}\n• ${userPoints >= 1000 ? '✅ Campus Leader' : '🌟 Next Goal: 1000 points'}\n• ${userPoints >= 2000 ? '✅ Elite Status' : '👑 Next Goal: 2000 points'}\n\n💡 **Pro Tip:** Check the ${leaderboard?.length > 0 ? 'Leaderboard page' : 'Profile Activity section'} for detailed rankings and compete with fellow students!\n\nKeep up the great work, ${firstName}! 🌟`,
         type: 'leaderboard',
         hasLinks: false
       };
     }
 
+    // Features
     if (message.includes('features') || message.includes('what can you do') || message.includes('capabilities')) {
       return {
-        content: `🌟 **CampusConnect Features & My Capabilities**
-
-🎯 **Platform Features:**
-• 🍕 Campus Food Ordering System with real-time tracking
-• 🎉 Events & Club Management with RSVP functionality
-• 🪪 Digital ID Card System with QR verification
-• 💳 Integrated Payment Gateway for all campus transactions
-• 📄 Digital Forms & Applications with instant processing
-• 🏆 Student Leaderboard & Gamification system
-• 🎓 Mentor-Student Connection Platform
-• 📚 Academic Progress Tracking and analytics
-
-🤖 **My AI Capabilities:**
-• Powered by Google Gemini for natural conversations
-• Natural language understanding and context awareness
-• Personalized responses using your profile data
-• Campus service guidance and navigation help
-• Real-time assistance 24/7
-• Context-aware conversations with memory
-• Multi-topic support with intelligent routing
-
-💡 **Smart Features:**
-• Voice-like typing delays for natural feel
-• Message status indicators and read receipts
-• Intelligent chat history management
-• Minimizable interface for multitasking
-• Fully responsive design for all devices
-• Dark/light theme support
-
-Ask me anything, ${firstName}! I'm here to make your campus life amazing! ✨`,
+        content: `🌟 **CampusConnect Features & My Capabilities**\n\n🎯 **Platform Features:**\n• 🍕 Campus Food Ordering System with real-time tracking\n• 🎉 Events & Club Management with RSVP functionality\n• 🪪 Digital ID Card System with QR verification\n• 💳 Integrated Payment Gateway for all campus transactions\n• 📄 Digital Forms & Applications with instant processing\n• 🏆 Student Leaderboard & Gamification system\n• 🎓 Mentor-Student Connection Platform\n• 📚 Academic Progress Tracking and analytics\n\n🤖 **My AI Capabilities:**\n• Powered by Google Gemini for natural conversations\n• Natural language understanding and context awareness\n• Personalized responses using your profile data\n• Campus service guidance and navigation help\n• Real-time assistance 24/7\n• Context-aware conversations with memory\n• Multi-topic support with intelligent routing\n\n💡 **Smart Features:**\n• Voice-like typing delays for natural feel\n• Message status indicators and read receipts\n• Intelligent chat history management\n• Minimizable interface for multitasking\n• Fully responsive design for all devices\n• Dark/light theme support\n\nAsk me anything, ${firstName}! I'm here to make your campus life amazing! ✨`,
         type: 'feature',
         hasLinks: false
       };
     }
 
+    // Contact/support
     if (message.includes('contact') || message.includes('support') || message.includes('help desk')) {
       return {
-        content: `📞 **CampusConnect Support & Contact**
-
-🆘 **Get Instant Help:**
-• Use this AI chat for immediate assistance (that's me!)
-• Submit feedback through Dashboard → Feedback section
-• Contact mentors for academic guidance and support
-• Use digital forms for official requests and queries
-
-📧 **Developer Contact:**
-• Connect on LinkedIn for professional inquiries
-• Use CampusConnect platform feedback for suggestions
-• Join our community for updates and discussions
-
-🏫 **Campus Support Channels:**
-• Visit your campus IT helpdesk for technical issues
-• Check the Forms section for official communication channels
-• Use the mentor system for peer-to-peer support
-• Access emergency contacts through your digital ID
-
-💬 **Advanced Chat Features:**
-• 24/7 AI assistance powered by Google Gemini
-• Instant responses for common campus queries
-• Smart suggestions and proactive guidance
-• Context-aware help based on your profile
-
-LinkedIn Profile:
-https://www.linkedin.com/in/mahesh-chitikeshi-b7a0982b9/
-
-How else can I help you today, ${firstName}? 🌟`,
+        content: `📞 **CampusConnect Support & Contact**\n\n🆘 **Get Instant Help:**\n• Use this AI chat for immediate assistance (that's me!)\n• Submit feedback through Dashboard → Feedback section\n• Contact mentors for academic guidance and support\n• Use digital forms for official requests and queries\n\n📧 **Developer Contact:**\n• Connect on LinkedIn for professional inquiries\n• Use CampusConnect platform feedback for suggestions\n• Join our community for updates and discussions\n\n🏫 **Campus Support Channels:**\n• Visit your campus IT helpdesk for technical issues\n• Check the Forms section for official communication channels\n• Use the mentor system for peer-to-peer support\n• Access emergency contacts through your digital ID\n\n💬 **Advanced Chat Features:**\n• 24/7 AI assistance powered by Google Gemini\n• Instant responses for common campus queries\n• Smart suggestions and proactive guidance\n• Context-aware help based on your profile\n\nLinkedIn Profile:\nhttps://www.linkedin.com/in/mahesh-chitikeshi-b7a0982b9/\n\nHow else can I help you today, ${firstName}? 🌟`,
         type: 'info',
         hasLinks: true
       };
     }
 
-    // Greeting responses
+    // Greetings
     if (message.includes('hello') || message.includes('hi') || message.includes('hey')) {
       const greetings = [
         `Hello ${firstName}! 😊 How can I help you today?`,
@@ -506,7 +460,7 @@ How else can I help you today, ${firstName}? 🌟`,
       };
     }
 
-    // Personal info requests
+    // Personal info
     if (message.includes('my profile') || message.includes('my info') || message.includes('about me')) {
       let profileInfo = `📋 **Your Profile Information, ${firstName}:**\n\n`;
       if (profile?.full_name) profileInfo += `👤 Name: ${profile.full_name}\n`;
@@ -524,80 +478,25 @@ How else can I help you today, ${firstName}? 🌟`,
       };
     }
 
-    // Local campus-specific responses
-    if (message.includes('food') || message.includes('order') || message.includes('campus store') || message.includes('hungry')) {
+    // Food/campus store
+    if (message.includes('food') || message.includes('order') || message.includes('campus store') || message.includes('hungry') || message.includes('lunch') || message.includes('dinner')) {
       return {
-        content: `🍕 **Food Ordering Made Easy!**
-
-Feeling hungry, ${firstName}? You're in the right place!
-
-🏪 **Campus Store Features:**
-• Browse available meals, snacks, and beverages
-• Check today's special menu and daily offers
-• Real-time order tracking from kitchen to delivery
-• Multiple secure payment options
-• GPS-based delivery to your exact location
-• Rate and review meals to help fellow students
-
-📱 **How to Order:**
-1. Go to Dashboard → Campus Store
-2. Browse the comprehensive menu
-3. Add items to your cart with customizations
-4. Choose delivery options and time slots
-5. Pay securely with your preferred method
-6. Track your order in real-time!
-
-🍽️ **Pro Tips:**
-• Check for daily specials and combo offers
-• Use your student discounts and loyalty points
-• Order in groups to save on delivery charges
-• Rate your meals to help others decide
-• Set dietary preferences for personalized recommendations
-
-Bon appétit! 🌟`,
+        content: `🍕 **Food Ordering Made Easy!**\n\nFeeling hungry, ${firstName}?\n\nAsk me for today's menu, or say 'I have a budget of 100, suggest lunch'!\n\n🏪 **Campus Store Features:**\n• Browse available meals, snacks, and beverages\n• Check today's menu and daily offers\n• Real-time order tracking\n• Multiple secure payment options\n• GPS-based delivery\n\n*Try: "What's on the menu today?" or "Suggest a lunch for ₹100"*`,
         type: 'feature',
         hasLinks: false
       };
     }
-    
+
     // Events and clubs
     if (message.includes('event') || message.includes('club') || message.includes('activity') || message.includes('fun')) {
       return {
-        content: `🎉 **Campus Events & Clubs**
-
-Great question, ${firstName}! Campus life is about to get exciting!
-
-🌟 **Available Features:**
-• Discover upcoming events with detailed information
-• Join clubs that match your interests and hobbies
-• Create and organize your own events
-• Meet like-minded students and build connections
-• Earn activity points for participation
-• Get personalized event recommendations
-
-🎯 **How to Get Started:**
-1. Visit Dashboard → Events & Clubs
-2. Browse upcoming events by category
-3. Join clubs you're interested in
-4. RSVP for events and track attendance
-5. Create your own activities and invite others!
-6. Build your social network on campus
-
-🏆 **Benefits:**
-• Build your professional and social network
-• Develop new skills and hobbies
-• Earn leaderboard points and achievements
-• Have fun and create lasting memories
-• Leadership opportunities in clubs
-• Certificate of participation for events
-
-What kind of events interest you most? 🌈`,
+        content: `🎉 **Campus Events & Clubs**\n\nGreat question, ${firstName}! Campus life is about to get exciting!\n\n🌟 **Available Features:**\n• Discover upcoming events with detailed information\n• Join clubs that match your interests and hobbies\n• Create and organize your own events\n• Meet like-minded students and build connections\n• Earn activity points for participation\n• Get personalized event recommendations\n\n🎯 **How to Get Started:**\n1. Visit Dashboard → Events & Clubs\n2. Browse upcoming events by category\n3. Join clubs you're interested in\n4. RSVP for events and track attendance\n5. Create your own activities and invite others!\n6. Build your social network on campus\n\n🏆 **Benefits:**\n• Build your professional and social network\n• Develop new skills and hobbies\n• Earn leaderboard points and achievements\n• Have fun and create lasting memories\n• Leadership opportunities in clubs\n• Certificate of participation for events\n\nWhat kind of events interest you most? 🌈`,
         type: 'feature',
         hasLinks: false
       };
     }
-    
-    // Gratitude responses
+
+    // Gratitude
     if (message.includes('thank') || message.includes('thanks') || message.includes('appreciate')) {
       const thankResponses = [
         `You're absolutely welcome, ${firstName}! 😊 I'm always here to help!`,
@@ -612,7 +511,7 @@ What kind of events interest you most? 🌈`,
       };
     }
 
-    // Goodbye responses
+    // Goodbye
     if (message.includes('bye') || message.includes('goodbye') || message.includes('see you')) {
       const goodbyeResponses = [
         `Goodbye, ${firstName}! Have an amazing day on campus! 🌟`,
@@ -627,7 +526,7 @@ What kind of events interest you most? 🌈`,
       };
     }
 
-    // For ALL other questions, ALWAYS try Google Gemini AI first
+    // Fallback: Google Gemini AI
     setIsUsingAI(true);
     try {
       const aiResponse = await getGoogleAIResponse(userMessage);
@@ -640,14 +539,11 @@ What kind of events interest you most? 🌈`,
     } catch (error) {
       setIsUsingAI(false);
       console.error('AI Response Error:', error);
-      
-      // Only fallback to local response if AI completely fails
       const defaultResponses = [
         `I'm having trouble connecting to my AI brain right now, ${firstName}! 😅 Could you try asking again, or be more specific about what you'd like to know?`,
         `Oops! My AI connection is a bit slow, ${firstName}. Could you rephrase your question or try asking about campus services?`,
         `Sorry ${firstName}, I'm experiencing some technical difficulties with my advanced AI features. Please try again in a moment!`
       ];
-      
       return {
         content: defaultResponses[Math.floor(Math.random() * defaultResponses.length)] + 
                "\n\n🌟 **Quick Suggestions:**\n• Ask about the founder\n• Check your leaderboard rank\n• Explore platform features\n• Get help with campus services",

@@ -23,6 +23,7 @@ import ClubAdmin from "./pages/ClubAdmin";
 import NotFound from "./pages/NotFound";
 import { CampusStorePage } from "./components/store/CampusStorePage";
 import StaffPointsPortal from "./pages/StaffPointsPortal";
+import { Analytics } from "@vercel/analytics/react";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/forgot-password" element={<ResetPassword />} />
                   <Route path="/debug-reset" element={<DebugReset />} />
                   <Route path="/admin-login" element={<AdminLogin />} />
                   <Route path="/provider-login" element={<ProviderLogin />} />
@@ -73,8 +75,10 @@ function App() {
               </PartnerAuthProvider>
             </AuthProvider>
           </BrowserRouter>
+          <Analytics />
         </TooltipProvider>
       </ThemeProvider>
+
     </QueryClientProvider>
   );
 }
