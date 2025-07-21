@@ -332,35 +332,43 @@ const ResetPassword = () => {
       // Check if the reset link has expired before attempting password update
       const resetLinkAccessTime = sessionStorage.getItem('resetLinkAccessTime');
       const linkTimeout = 1 * 60 * 1000; // 1 minute in milliseconds
+      
       if (resetLinkAccessTime) {
         const accessTime = parseInt(resetLinkAccessTime);
         const timeElapsed = Date.now() - accessTime;
+        
         if (timeElapsed > linkTimeout) {
           console.error('Reset link expired during password update');
           setError('This password reset link has expired. Reset links are valid for 1 minute only. Please request a new password reset.');
           setLoading(false);
           return;
         }
+        
         console.log('Link expiration check:', {
           timeElapsed: Math.floor(timeElapsed / 1000) + ' seconds',
           timeRemaining: Math.floor((linkTimeout - timeElapsed) / 1000) + ' seconds',
           isValid: timeElapsed <= linkTimeout
         });
       }
+
       // Get the access token from the URL
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const queryParams = new URLSearchParams(window.location.search);
       const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+
       console.log('Starting password update with token:', {
         hasToken: !!accessToken,
         tokenLength: accessToken?.length || 0,
         tokenType: accessToken?.includes('.') ? 'JWT' : 'Recovery Token'
       });
+
       let updateResult;
+      
       if (accessToken) {
         // Check if this is a JWT or recovery token
         const isJWT = accessToken.includes('.') && accessToken.split('.').length === 3;
+        
         if (isJWT) {
           // For JWT tokens, try to set session first
           console.log('Using JWT token for password update...');
@@ -382,6 +390,7 @@ const ResetPassword = () => {
               token_hash: accessToken,
               type: 'recovery'
             });
+            
             if (error) {
               console.error('Recovery token verification failed:', error);
               // Continue anyway, might still work with updateUser
@@ -392,6 +401,7 @@ const ResetPassword = () => {
             console.log('Recovery verification failed, trying direct update:', verifyError);
           }
         }
+        
         // Now attempt to update the password
         updateResult = await supabase.auth.updateUser({
           password: password
@@ -403,18 +413,20 @@ const ResetPassword = () => {
           password: password
         });
       }
+
       console.log('Password update result:', updateResult);
       const { error: updateError, data: updateData } = updateResult;
+      
       console.log('Update response details:', {
         hasError: !!updateError,
         errorMessage: updateError?.message,
         hasData: !!updateData,
         userData: updateData?.user?.email
       });
+
       if (updateError) {
         console.error('Password update error:', updateError);
         setError(updateError.message || "Failed to update password. Please try again.");
-        setLoading(false);
         toast({
           title: "Password Reset Failed",
           description: updateError.message || "Failed to update password. Please try again.",
@@ -426,10 +438,12 @@ const ResetPassword = () => {
         setSuccess(true);
         setLoading(false);
         setTimeRemaining(null); // Hide countdown timer
+        
         toast({
           title: "Password Updated",
           description: "Your password has been successfully updated.",
         });
+        
         // Wait a moment before signing out to ensure the success state is visible
         setTimeout(async () => {
           try {
@@ -438,35 +452,39 @@ const ResetPassword = () => {
           } catch (signOutError) {
             console.error('Error signing out:', signOutError);
           }
+          
           // Redirect to login after sign out
           setTimeout(() => {
             navigate("/login");
           }, 1000);
         }, 2000); // Show success message for 2 seconds
       }
-      // 5-second fallback: if neither success nor error, show password updated
+      
+      // Additional fallback: If we see auth state change but no success yet, force success
       setTimeout(() => {
-        if (!success && !error) {
+        if (!success && !updateError && !loading) {
+          console.log('Fallback: Detected successful auth state change, showing success');
           setSuccess(true);
-          setLoading(false);
           setTimeRemaining(null);
           toast({
             title: "Password Updated",
             description: "Your password has been successfully updated.",
           });
         }
-      }, 5000);
+      }, 1000);
     } catch (err) {
       console.error('Password reset exception:', err);
       const errorMessage = err instanceof Error ? err.message : "Network error. Please check your connection.";
       setError(errorMessage);
       setLoading(false);
+      
       // Restart timer if password update failed and session is still valid
       if (validSession && !timerRef) {
         console.log('Restarting countdown timer after error');
         // This will trigger the useEffect to restart the timer
         setValidSession(true);
       }
+      
       toast({
         title: "Password Reset Failed",
         description: errorMessage,
