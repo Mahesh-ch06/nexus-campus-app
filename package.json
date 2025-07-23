@@ -1,9 +1,9 @@
 {
-  "name": "CampusConnect-demo",
+  "name": "campusconnect-demo",
   "private": true,
   "version": "0.1.2",
   "type": "module",
-  "homepage": "https://Mahesh-ch06.github.io/CampusConnect-demo",
+  "homepage": "https://mahesh-ch06.github.io/nexus-campus-app/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

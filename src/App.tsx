@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import AdminPointsPortal from "./pages/AdminPointsPortal";
+import AdminLoginCC500 from "./pages/AdminLoginCC500";
 import { AuthProvider } from "@/hooks/useAuth";
 import { PartnerAuthProvider } from "@/hooks/usePartnerAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -23,7 +25,6 @@ import ClubAdmin from "./pages/ClubAdmin";
 import NotFound from "./pages/NotFound";
 import { CampusStorePage } from "./components/store/CampusStorePage";
 import StaffPointsPortal from "./pages/StaffPointsPortal";
-import { Analytics } from "@vercel/analytics/react";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,8 @@ function App() {
                   <Route path="/club-admin" element={<ClubAdmin />} />
                   <Route path="/partner-dashboard" element={<PartnerDashboard />} />
                   <Route path="/staff-portal" element={<StaffPointsPortal />} />
+                  <Route path="/admin-points" element={<AdminPointsPortal />} />
+                  <Route path="/admin-login-cc500" element={<AdminLoginCC500 />} />
                   <Route
                     path="/campus-store"
                     element={
@@ -75,10 +78,8 @@ function App() {
               </PartnerAuthProvider>
             </AuthProvider>
           </BrowserRouter>
-          <Analytics />
         </TooltipProvider>
       </ThemeProvider>
-
     </QueryClientProvider>
   );
 }

@@ -62,7 +62,7 @@ export const useUserProfile = () => {
       setLoading(false);
       setError(null);
     }
-  }, [user?.id, authLoading, session?.access_token, fetchProfile, session, user]);
+  }, [user?.id, authLoading, session?.access_token]);
 
   const refetch = useCallback(() => {
     fetchingRef.current = false; // Reset fetch guard
